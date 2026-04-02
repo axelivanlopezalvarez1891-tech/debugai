@@ -1,1 +1,43 @@
-index.html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>DebugAI</title>
+</head>
+<body style="font-family: Arial; text-align: center; padding: 40px; background:#0f172a; color:white;">
+
+  <h1>🔧 DebugAI</h1>
+  <p>Soluciona errores de programación en segundos</p>
+
+  <textarea id="errorInput" placeholder="Pega tu error aquí..." 
+  style="width:80%; height:120px; padding:10px;"></textarea>
+
+  <br><br>
+
+  <button onclick="analizar()" 
+  style="padding:10px 20px; font-size:16px; cursor:pointer;">
+  Analizar
+  </button>
+
+  <p id="respuesta" style="margin-top:20px;"></p>
+
+  <script>
+    function analizar() {
+      const error = document.getElementById("errorInput").value;
+      const respuesta = document.getElementById("respuesta");
+
+      if (error.trim() === "") {
+        respuesta.innerText = "⚠️ Escribe un error primero";
+        return;
+      }
+
+      if (error.includes("undefined")) {
+        respuesta.innerText = "❌ Variable no definida. Revisa si la declaraste.";
+      } else {
+        respuesta.innerText = "🤖 Analizando... (pronto con IA real)";
+      }
+    }
+  </script>
+
+</body>
+</html>
