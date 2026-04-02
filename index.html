@@ -22,28 +22,30 @@
   <p id="respuesta" style="margin-top:20px;"></p>
 
   <script>
-    function analizar() {
-      const error = document.getElementById("errorInput").value;
-      const respuesta = document.getElementById("respuesta");
+   <script>
+function analizar() {
+  const error = document.getElementById("errorInput").value.toLowerCase();
+  const respuesta = document.getElementById("respuesta");
 
-      if (error.trim() === "") {
-        respuesta.innerText = "⚠️ Escribe un error primero";
-        return;
-      }
+  if (error.trim() === "") {
+    respuesta.innerText = "⚠️ Escribe un error primero";
+    return;
+  }
 
-if (error.toLowerCase().includes("undefined")) {
-  respuesta.innerText = "❌ Este error significa que estás usando una variable que no fue definida. Revisa si la escribiste bien o si olvidaste declararla.";
-} 
-else if (error.toLowerCase().includes("syntax")) {
-  respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; , paréntesis o algo está mal escrito.";
+  if (error.includes("undefined")) {
+    respuesta.innerText = "❌ Este error significa que estás usando una variable que no fue definida. Revisa si la escribiste bien o si olvidaste declararla.";
+  } 
+  else if (error.includes("syntax")) {
+    respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; , paréntesis o algo está mal escrito.";
+  }
+  else if (error.includes("null")) {
+    respuesta.innerText = "⚠️ Estás intentando usar algo que es null (vacío). Asegúrate de que tenga valor antes de usarlo.";
+  }
+  else {
+    respuesta.innerText = "🤖 No reconozco el error aún, pero pronto tendré IA para ayudarte mejor.";
+  }
 }
-else if (error.toLowerCase().includes("null")) {
-  respuesta.innerText = "⚠️ Estás intentando usar algo que es null (vacío). Asegúrate de que tenga valor antes de usarlo.";
-}
-else {
-  respuesta.innerText = "🤖 No reconozco el error aún, pero pronto tendré IA para ayudarte mejor.";
-}
-      }
+</script>
     }
   </script>
 
