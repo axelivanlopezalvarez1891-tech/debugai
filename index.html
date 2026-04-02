@@ -31,10 +31,18 @@
         return;
       }
 
-      if (error.includes("undefined")) {
-        respuesta.innerText = "❌ Variable no definida. Revisa si la declaraste.";
-      } else {
-        respuesta.innerText = "🤖 Analizando... (pronto con IA real)";
+if (error.toLowerCase().includes("undefined")) {
+  respuesta.innerText = "❌ Este error significa que estás usando una variable que no fue definida. Revisa si la escribiste bien o si olvidaste declararla.";
+} 
+else if (error.toLowerCase().includes("syntax")) {
+  respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; , paréntesis o algo está mal escrito.";
+}
+else if (error.toLowerCase().includes("null")) {
+  respuesta.innerText = "⚠️ Estás intentando usar algo que es null (vacío). Asegúrate de que tenga valor antes de usarlo.";
+}
+else {
+  respuesta.innerText = "🤖 No reconozco el error aún, pero pronto tendré IA para ayudarte mejor.";
+}
       }
     }
   </script>
