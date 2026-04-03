@@ -7,10 +7,10 @@
 <body style="font-family: Arial; text-align: center; padding: 40px; background:#0f172a; color:white;">
 
   <h1>🔧 DebugAI</h1>
-  <p>Soluciona errores de programación en segundos</p>
+  <p>Soluciona errores de programación con explicación paso a paso</p>
 
-  <textarea id="errorInput" placeholder="Pega tu error aquí..." 
-  style="width:80%; height:120px; padding:10px;"></textarea>
+  <textarea id="errorInput" placeholder="Pega tu error o código aquí..." 
+  style="width:80%; height:150px; padding:10px;"></textarea>
 
   <br><br>
 
@@ -19,7 +19,7 @@
   Analizar
   </button>
 
-  <p id="respuesta" style="margin-top:20px;"></p>
+  <div id="respuesta" style="margin-top:20px; white-space:pre-wrap; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;"></div>
 
 <script>
 function analizar() {
@@ -31,19 +31,123 @@ function analizar() {
     return;
   }
 
+  // ERROR SYNTAX
   if (error.includes("syntax")) {
-    respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; o paréntesis.";
-  } 
+    respuesta.innerText = `⚠️ ERROR DE SINTAXIS
+
+📌 Qué significa:
+Hay algo mal escrito en tu código.
+
+🛠 Cómo solucionarlo paso a paso:
+1. Revisa paréntesis → () 
+2. Revisa llaves → {}
+3. Verifica comillas → "" o ''
+4. Asegúrate de cerrar todo correctamente
+5. Verifica puntos y coma ;
+
+💡 Ejemplo:
+ANTES:
+if(x > 5 {
+
+DESPUÉS:
+if(x > 5) {
+}`;
+  }
+
+  // ERROR UNDEFINED
   else if (error.includes("undefined")) {
-    respuesta.innerText = "❌ Variable no definida.";
+    respuesta.innerText = `❌ VARIABLE NO DEFINIDA
+
+📌 Qué significa:
+Estás usando una variable que no existe o no fue declarada.
+
+🛠 Cómo solucionarlo paso a paso:
+1. Busca la variable que da error
+2. Declárala antes de usarla
+3. Revisa si escribiste bien el nombre
+
+💡 Ejemplo:
+ANTES:
+console.log(x)
+
+DESPUÉS:
+let x = 10;
+console.log(x)`;
   }
+
+  // ERROR NULL
   else if (error.includes("null")) {
-    respuesta.innerText = "⚠️ Valor null (vacío).";
+    respuesta.innerText = `⚠️ VALOR NULL
+
+📌 Qué significa:
+La variable está vacía.
+
+🛠 Cómo solucionarlo paso a paso:
+1. Verifica que la variable tenga valor
+2. Usa una validación antes de usarla
+
+💡 Ejemplo:
+if(x !== null) {
+  console.log(x)
+}`;
   }
+
+  // ERROR TYPE
+  else if (error.includes("typeerror")) {
+    respuesta.innerText = `❌ TYPE ERROR
+
+📌 Qué significa:
+Estás usando un tipo de dato incorrecto.
+
+🛠 Cómo solucionarlo:
+1. Verifica el tipo de dato (string, number, etc.)
+2. Asegúrate de usar métodos correctos
+
+💡 Ejemplo:
+ANTES:
+"hola".toFixed()
+
+DESPUÉS:
+Number(10).toFixed()`;
+  }
+
+  // ERROR NOT A FUNCTION
+  else if (error.includes("not a function")) {
+    respuesta.innerText = `❌ NO ES UNA FUNCIÓN
+
+📌 Qué significa:
+Estás intentando ejecutar algo que no es función.
+
+🛠 Cómo solucionarlo:
+1. Verifica que sea una función
+2. Revisa cómo la estás llamando
+
+💡 Ejemplo:
+ANTES:
+x()
+
+DESPUÉS:
+function x() {}
+x()`;
+  }
+
+  // ERROR GENERAL
   else {
-    respuesta.innerText = "🤖 No reconozco el error todavía.";
+    respuesta.innerText = `🤖 NO RECONOZCO EL ERROR
+
+📌 Posible causa:
+El error no está en mi base aún.
+
+🛠 Qué podés hacer:
+1. Revisar el mensaje completo
+2. Buscar en Google el error
+3. Revisar documentación oficial
+
+🚀 Próximamente:
+Este sitio tendrá IA real para detectar cualquier error automáticamente.`;
   }
 }
 </script>
+
 </body>
 </html>
