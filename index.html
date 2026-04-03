@@ -21,8 +21,7 @@
 
   <p id="respuesta" style="margin-top:20px;"></p>
 
-  <script>
-   <script>
+<script>
 function analizar() {
   const error = document.getElementById("errorInput").value.toLowerCase();
   const respuesta = document.getElementById("respuesta");
@@ -32,22 +31,19 @@ function analizar() {
     return;
   }
 
-  if (error.includes("undefined")) {
-    respuesta.innerText = "❌ Este error significa que estás usando una variable que no fue definida. Revisa si la escribiste bien o si olvidaste declararla.";
+  if (error.includes("syntax")) {
+    respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; o paréntesis.";
   } 
-  else if (error.includes("syntax")) {
-    respuesta.innerText = "⚠️ Error de sintaxis. Probablemente falta un ; , paréntesis o algo está mal escrito.";
+  else if (error.includes("undefined")) {
+    respuesta.innerText = "❌ Variable no definida.";
   }
   else if (error.includes("null")) {
-    respuesta.innerText = "⚠️ Estás intentando usar algo que es null (vacío). Asegúrate de que tenga valor antes de usarlo.";
+    respuesta.innerText = "⚠️ Valor null (vacío).";
   }
   else {
-    respuesta.innerText = "🤖 No reconozco el error aún, pero pronto tendré IA para ayudarte mejor.";
+    respuesta.innerText = "🤖 No reconozco el error todavía.";
   }
 }
 </script>
-    }
-  </script>
-
 </body>
 </html>
