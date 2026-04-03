@@ -3,51 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <title>DebugAI</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+      background: #0f172a;
+      color: white;
+    }
+
+    textarea {
+      width: 80%;
+      height: 150px;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 10px;
+      border: none;
+      background: #22c55e;
+      color: white;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+
+    #respuesta {
+      margin-top: 25px;
+      white-space: pre-wrap;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #020617;
+      padding: 20px;
+      border-radius: 10px;
+    }
+  </style>
 </head>
-<body style="font-family: Arial; text-align: center; padding: 40px; background:#0f172a; color:white;">
+
+<body>
 
   <h1>🔧 DebugAI</h1>
-  <p>Soluciona errores de programación con explicación paso a paso</p>
+  <p>Soluciona errores de programación con IA (paso a paso)</p>
 
-  <textarea id="errorInput" placeholder="Pega tu error o código aquí..." 
-  style="width:80%; height:150px; padding:10px;"></textarea>
+  <textarea id="errorInput" placeholder="Pega tu error o código aquí..."></textarea>
 
   <br><br>
 
-  <button onclick="analizar()" 
-  style="padding:10px 20px; font-size:16px; cursor:pointer;">
-  Analizar
-  </button>
+  <button onclick="analizar()">Analizar</button>
 
-  <div id="respuesta" style="margin-top:20px; white-space:pre-wrap; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;"></div>
+  <div id="respuesta"></div>
 
-<script>
-async function analizar() {
-  const error = document.getElementById("errorInput").value;
-  const respuesta = document.getElementById("respuesta");
+  <script>
+    async function analizar() {
+      const error = document.getElementById("errorInput").value;
+      const respuesta = document.getElementById("respuesta");
 
-  if (error.trim() === "") {
-    respuesta.innerText = "⚠️ Escribe un error primero";
-    return;
-  }
+      if (error.trim() === "") {
+        respuesta.innerText = "⚠️ Escribe un error primero";
+        return;
+      }
 
-  respuesta.innerText = "⏳ Analizando con IA...";
+      respuesta.innerText = "⏳ Analizando con IA...";
 
-  try {
-    const res = await fetch("http://localhost:3000/analizar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ error })
-    });
+      try {
+        const res = await fetch("http://localhost:3000/debug", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ error })
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    respuesta.innerText = data.respuesta;
+        respuesta.innerText = data.respuesta;
+      } catch (err) {
+        respuesta.innerText = "❌ Error conectando con el servidor";
+        console.error(err);
+      }
+    }
+  </script>
 
-  } catch (err) {
-    respuesta.innerText = "❌ Error conectando con la IA";
-  }
-}
-</script>
+</body>
+</html>
