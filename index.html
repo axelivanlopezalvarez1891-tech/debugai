@@ -22,8 +22,8 @@
   <div id="respuesta" style="margin-top:20px; white-space:pre-wrap; text-align:left; max-width:800px; margin-left:auto; margin-right:auto;"></div>
 
 <script>
-function analizar() {
-  const error = document.getElementById("errorInput").value.toLowerCase();
+async function analizar() {
+  const error = document.getElementById("errorInput").value;
   const respuesta = document.getElementById("respuesta");
 
   if (error.trim() === "") {
@@ -31,123 +31,23 @@ function analizar() {
     return;
   }
 
-  // ERROR SYNTAX
-  if (error.includes("syntax")) {
-    respuesta.innerText = `⚠️ ERROR DE SINTAXIS
+  respuesta.innerText = "⏳ Analizando con IA...";
 
-📌 Qué significa:
-Hay algo mal escrito en tu código.
+  try {
+    const res = await fetch("http://localhost:3000/analizar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ error })
+    });
 
-🛠 Cómo solucionarlo paso a paso:
-1. Revisa paréntesis → () 
-2. Revisa llaves → {}
-3. Verifica comillas → "" o ''
-4. Asegúrate de cerrar todo correctamente
-5. Verifica puntos y coma ;
+    const data = await res.json();
 
-💡 Ejemplo:
-ANTES:
-if(x > 5 {
+    respuesta.innerText = data.respuesta;
 
-DESPUÉS:
-if(x > 5) {
-}`;
-  }
-
-  // ERROR UNDEFINED
-  else if (error.includes("undefined")) {
-    respuesta.innerText = `❌ VARIABLE NO DEFINIDA
-
-📌 Qué significa:
-Estás usando una variable que no existe o no fue declarada.
-
-🛠 Cómo solucionarlo paso a paso:
-1. Busca la variable que da error
-2. Declárala antes de usarla
-3. Revisa si escribiste bien el nombre
-
-💡 Ejemplo:
-ANTES:
-console.log(x)
-
-DESPUÉS:
-let x = 10;
-console.log(x)`;
-  }
-
-  // ERROR NULL
-  else if (error.includes("null")) {
-    respuesta.innerText = `⚠️ VALOR NULL
-
-📌 Qué significa:
-La variable está vacía.
-
-🛠 Cómo solucionarlo paso a paso:
-1. Verifica que la variable tenga valor
-2. Usa una validación antes de usarla
-
-💡 Ejemplo:
-if(x !== null) {
-  console.log(x)
-}`;
-  }
-
-  // ERROR TYPE
-  else if (error.includes("typeerror")) {
-    respuesta.innerText = `❌ TYPE ERROR
-
-📌 Qué significa:
-Estás usando un tipo de dato incorrecto.
-
-🛠 Cómo solucionarlo:
-1. Verifica el tipo de dato (string, number, etc.)
-2. Asegúrate de usar métodos correctos
-
-💡 Ejemplo:
-ANTES:
-"hola".toFixed()
-
-DESPUÉS:
-Number(10).toFixed()`;
-  }
-
-  // ERROR NOT A FUNCTION
-  else if (error.includes("not a function")) {
-    respuesta.innerText = `❌ NO ES UNA FUNCIÓN
-
-📌 Qué significa:
-Estás intentando ejecutar algo que no es función.
-
-🛠 Cómo solucionarlo:
-1. Verifica que sea una función
-2. Revisa cómo la estás llamando
-
-💡 Ejemplo:
-ANTES:
-x()
-
-DESPUÉS:
-function x() {}
-x()`;
-  }
-
-  // ERROR GENERAL
-  else {
-    respuesta.innerText = `🤖 NO RECONOZCO EL ERROR
-
-📌 Posible causa:
-El error no está en mi base aún.
-
-🛠 Qué podés hacer:
-1. Revisar el mensaje completo
-2. Buscar en Google el error
-3. Revisar documentación oficial
-
-🚀 Próximamente:
-Este sitio tendrá IA real para detectar cualquier error automáticamente.`;
+  } catch (err) {
+    respuesta.innerText = "❌ Error conectando con la IA";
   }
 }
 </script>
-
-</body>
-</html>
