@@ -1755,7 +1755,7 @@
       isCheckingGift = true;
       try {
         if (window.isPremiumUser) { await sincronizarHUD(); }
-        const res = await fetch(API + "/check-gift", { headers: { "Authorization": token } });
+        const res = await fetch(API + "/check-gift", { credentials: "include",  headers: { "Authorization": token } });
         const data = await res.json();
         
         const badge = document.getElementById("inboxBadge");
@@ -1826,7 +1826,7 @@
        overlay.querySelector('.epic-blast-sub').innerHTML = `Sincronizando licencia Suprema...`;
        
        try {
-           const res = await fetch(API + "/claim-gift", { method: "POST", headers: { "Authorization": token } });
+           const res = await fetch(API + "/claim-gift", { credentials: "include",  method: "POST", headers: { "Authorization": token } });
            const data = await res.json();
            
            setTimeout(() => { document.body.classList.remove("shake-global"); }, 400);
@@ -2287,7 +2287,7 @@
     });
 
     const API = "";
-    let token = localStorage.getItem("token");
+    let token = "cookie_mode";
     let currentChatId = null;
     let currentImageBase64 = null;
     let isPremiumUser = false;
@@ -2300,7 +2300,7 @@
     async function trackClientEvent(tipo, metadata = {}) {
       if (!token) return;
       try {
-        await fetch(API + '/api/eventos/track', {
+        await fetch(API + '/api/eventos/track', { credentials: "include", 
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': token },
           body: JSON.stringify({ tipo, metadata })
@@ -2431,10 +2431,10 @@
       const user = document.getElementById("user").value.trim();
       const pass = document.getElementById("pass").value.trim();
       if (!user || !pass) return showAlert("Completa todos los campos");
-      const res = await fetch(API + "/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
+      const res = await fetch(API + "/login", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
       const data = await res.json();
       if (!data.ok) return showAlert(data.msg);
-      token = data.token; localStorage.setItem("token", token);
+       
       iniciarApp();
     }
 
@@ -2442,14 +2442,14 @@
       const user = document.getElementById("user").value.trim();
       const pass = document.getElementById("pass").value.trim();
       if (!user || !pass) return showAlert("Completa todos los campos");
-      const res = await fetch(API + "/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
+      const res = await fetch(API + "/register", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
       const data = await res.json();
       if (!data.ok) return showAlert(data.msg);
       showAlert(data.msg || "¡Registrado con éxito! Ahora inicia sesión.", "success");
     }
 
     function logout() {
-      token = null; localStorage.removeItem("token");
+      token = null; fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       appBox.style.display = "none"; authBox.style.display = "block";
       currentChatId = null; chatWindow.innerHTML = ""; chatListBox.innerHTML = "";
       quitarImagen(); document.body.classList.remove("is-premium");
@@ -2464,7 +2464,7 @@
     }
 
     async function ejecutarEliminarCuenta() {
-      const res = await fetch(API + "/account", { method: "DELETE", headers: { "Authorization": token } });
+      const res = await fetch(API + "/account", { credentials: "include",  method: "DELETE", headers: { "Authorization": token } });
       const data = await res.json();
       if (data.ok) {
         cerrarModal("modalEliminar");
@@ -2509,7 +2509,7 @@
     }
 
     async function sincronizarHUD() {
-      const res = await fetch(API + "/get-perfil", { headers: { "Authorization": token } });
+      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { "Authorization": token } });
       const data = await res.json();
       if (data.ok) {
         isPremiumUser = data.premium;
@@ -2615,7 +2615,7 @@
     }
 
     async function abrirPerfil() {
-      const res = await fetch(API + "/get-perfil", { headers: { "Authorization": token } });
+      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { "Authorization": token } });
       const data = await res.json();
       if (data.ok) {
         document.getElementById("perfilNombre").value = data.nombre || "";
@@ -2627,7 +2627,7 @@
     async function guardarPerfil() {
       const nombre = document.getElementById("perfilNombre").value.trim();
       const rol = document.getElementById("perfilRol").value.trim();
-      await fetch(API + "/update-perfil", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ nombre, rol }) });
+      await fetch(API + "/update-perfil", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ nombre, rol }) });
       cerrarModal("modalPerfil");
     }
 
@@ -2671,7 +2671,7 @@
 
       if (metodo === 'mercadopago') {
         try {
-          const res = await fetch(API + "/api/create-preference", {
+          const res = await fetch(API + "/api/create-preference", { credentials: "include", 
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": token },
             body: JSON.stringify({ amount: currentTokenQueue, isPro: isProBuying })
@@ -2685,7 +2685,7 @@
       
       if (metodo === 'paypal') {
         try {
-          const res = await fetch(API + "/api/create-paypal-order", {
+          const res = await fetch(API + "/api/create-paypal-order", { credentials: "include", 
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": token },
             body: JSON.stringify({ amount: currentTokenQueue, isPro: isProBuying })
@@ -2720,7 +2720,7 @@
         const formData = new FormData();
         formData.append("document", file);
         showToast("Extrayendo texto interactivo...", "info");
-        fetch(API + "/upload-document", {
+        fetch(API + "/upload-document", { credentials: "include", 
           method: "POST", headers: { "Authorization": token }, body: formData
         }).then(r => r.json()).then(data => {
           if (data.ok) {
@@ -2790,7 +2790,7 @@
         // [FIX CRITICO] Servidor caído o token inválido — jamas dejar pantalla negra
         console.error('[iniciarApp] Error crítico al iniciar:', e);
         token = null;
-        localStorage.removeItem('token');
+        fetch("/api/auth/logout", { method: "POST", credentials: "include" });
         authBox.style.display = 'block';
         appBox.style.display = 'none';
         introBox.classList.remove('active');
@@ -2800,7 +2800,7 @@
 
 
     async function cargarChats() {
-      const res = await fetch(API + "/chats", { headers: { "Authorization": token } });
+      const res = await fetch(API + "/chats", { credentials: "include",  headers: { "Authorization": token } });
       const data = await res.json();
       chatListBox.innerHTML = "";
       if (data.chats && data.chats.length > 0) {
@@ -2847,7 +2847,7 @@
             moveBtn.onclick = (e) => {
               e.stopPropagation();
               const fName = prompt("Nombre de la carpeta (vacío para quitar):", chat.folder || "");
-              if (fName !== null) fetch(API + "/update-chat", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: chat.id, folder: fName }) }).then(() => cargarChats());
+              if (fName !== null) fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: chat.id, folder: fName }) }).then(() => cargarChats());
             };
 
             const delBtn = document.createElement("button"); delBtn.className = "btn-delete-chat";
@@ -2862,13 +2862,13 @@
     }
 
     async function crearChat(conIntro = false) {
-      const res = await fetch(API + "/crear-chat", { method: "POST", headers: { "Authorization": token, "Content-Type": "application/json" }, body: JSON.stringify({ intro: conIntro }) });
+      const res = await fetch(API + "/crear-chat", { credentials: "include",  method: "POST", headers: { "Authorization": token, "Content-Type": "application/json" }, body: JSON.stringify({ intro: conIntro }) });
       const data = await res.json();
       if (data.ok) { await cargarChats(); seleccionarChat(data.chat.id, data.chat.mensajes); }
     }
 
     async function eliminarChat(id) {
-      const res = await fetch(API + "/chat/" + id, { method: "DELETE", headers: { "Authorization": token } });
+      const res = await fetch(API + "/chat/" + id, { credentials: "include",  method: "DELETE", headers: { "Authorization": token } });
       const data = await res.json();
       if (data.ok) {
         if (currentChatId === id) {
@@ -3040,7 +3040,7 @@
       currentAbortController = new AbortController();
 
       try {
-        const res = await fetch(API + "/mensaje", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify(payload), signal: currentAbortController.signal });
+        const res = await fetch(API + "/mensaje", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify(payload), signal: currentAbortController.signal });
         
         // [FIX 429] Detectar rate limit ANTES de intentar leer como SSE
         if (res.status === 429) {
@@ -3151,7 +3151,7 @@
         overlay.querySelector('.epic-blast-sub').innerHTML = "Verificando transacción en la red PayPal...";
         setTimeout(() => { document.body.classList.remove("shake-global"); }, 400);
 
-        fetch(API + "/api/capture-paypal-order", {
+        fetch(API + "/api/capture-paypal-order", { credentials: "include", 
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": token },
           body: JSON.stringify({ orderID: orderId, type, qty })
@@ -3346,7 +3346,7 @@
     }
 
     async function regenerarUltimo() {
-      const res = await fetch(API + "/regenerate-chat/" + currentChatId, { method: "POST", headers: { "Authorization": token } });
+      const res = await fetch(API + "/regenerate-chat/" + currentChatId, { credentials: "include",  method: "POST", headers: { "Authorization": token } });
       const data = await res.json();
       if (data.ok) {
         const msgs = document.querySelectorAll('.msg-wrapper');
@@ -3395,7 +3395,7 @@
       await crearChat(true);
 
       if (currentChatId) {
-        await fetch(API + "/update-chat", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: currentChatId, folder: config.folder }) });
+        await fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: currentChatId, folder: config.folder }) });
         document.getElementById('inputMsg').value = config.prompt;
         autoExpand(document.getElementById('inputMsg'));
       }

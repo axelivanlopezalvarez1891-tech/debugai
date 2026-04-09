@@ -342,7 +342,7 @@
   </div>
 
 <script>
-let token = localStorage.getItem("token");
+let token = "cookie_mode";
 let chartActividad = null;
 let chartEventos = null;
 
@@ -366,7 +366,7 @@ async function checkAdminAccess() {
     const masterKey = prompt("🔒 ACCESO RESTRINGIDO\n\nIngresá la Llave Maestra:");
     if (!masterKey || !masterKey.trim()) { window.location.href = "/"; return; }
     try {
-      const res = await fetch("/api/admin/make-me-admin", {
+      const res = await fetch("/api/admin/make-me-admin", { credentials: "include", 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -374,8 +374,8 @@ async function checkAdminAccess() {
       });
       const data = await res.json();
       if (data.ok && data.token) {
-        token = data.token;
-        localStorage.setItem("token", token);
+        
+        
         loadAll();
       } else {
         alert("Llave Maestra Inválida. Acceso denegado.");
@@ -391,7 +391,7 @@ async function checkAdminAccess() {
 }
 
 function logout() {
-  localStorage.removeItem("token");
+  fetch("/api/auth/logout", { method: "POST", credentials: "include" });
   window.location.href = "/";
 }
 
@@ -406,7 +406,7 @@ async function loadStats() {
   const statusEl = document.getElementById('statusFeedback');
   statusEl.style.display = "none";
   try {
-    const res = await fetch("/api/admin/stats", { headers: { "Authorization": token }, cache: "no-store" });
+    const res = await fetch("/api/admin/stats", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" });
     const data = await res.json();
 
     if (data.ok) {
@@ -463,7 +463,7 @@ async function loadStats() {
     } else {
       statusEl.innerText = "⛔ ACCESO DENEGADO: " + (data.msg || "Iniciá sesión de nuevo.");
       statusEl.style.display = "block";
-      localStorage.removeItem("token");
+      fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       setTimeout(() => location.reload(), 2000);
     }
   } catch (e) {
@@ -478,8 +478,8 @@ async function loadStats() {
 async function loadAnaliticas() {
   try {
     const [resAn, resEv] = await Promise.all([
-      fetch("/api/admin/analiticas", { headers: { "Authorization": token }, cache: "no-store" }),
-      fetch("/api/admin/eventos?limit=50", { headers: { "Authorization": token }, cache: "no-store" })
+      fetch("/api/admin/analiticas", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" }),
+      fetch("/api/admin/eventos?limit=50", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" })
     ]);
     const an = await resAn.json();
     const ev = await resEv.json();
@@ -616,7 +616,7 @@ async function submitProTime(durationStr) {
   const label = durationStr === 'null' ? 'DE POR VIDA' : (labels[durationStr] || durationStr + 'ms');
   if (durationStr !== "null") duration = parseInt(durationStr);
   if (!confirm(`¿Estás seguro?\n\n→ Usuario: ${currentTargetPro}\n→ Acceso PRO: ${label}`)) return;
-  const res = await fetch("/api/admin/upgrade-user", { method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:currentTargetPro, duration}) });
+  const res = await fetch("/api/admin/upgrade-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:currentTargetPro, duration}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -628,7 +628,7 @@ async function giftTokens(targetUser) {
   if (qty === null) return;
   const amount = parseInt(qty);
   if (isNaN(amount) || amount <= 0) return alert("Ingresá un número válido.");
-  const res = await fetch("/api/admin/gift-tokens", { method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser, amount}) });
+  const res = await fetch("/api/admin/gift-tokens", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser, amount}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -636,7 +636,7 @@ async function giftTokens(targetUser) {
 
 async function deleteUser(targetUser) {
   if (!confirm(`¿ESTÁS SEGURO?\n\nEsta acción ELIMINARÁ permanentemente la cuenta de:\n→ ${targetUser}`)) return;
-  const res = await fetch("/api/admin/delete-user", { method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser}) });
+  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -662,7 +662,7 @@ async function deleteSelectedUsers() {
   const usersToDelete = Array.from(cbs).map(cb => cb.value);
   if (!confirm(`⚠️ ¿Eliminar ${usersToDelete.length} usuario(s)?\n\nEsta acción NO se puede deshacer.`)) return;
   document.getElementById('btnDeleteSelected').innerText = "Borrando...";
-  const res = await fetch("/api/admin/delete-user", { method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:usersToDelete}) });
+  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:usersToDelete}) });
   const data = await res.json();
   alert(data.msg);
   document.getElementById('selectAll').checked = false;
@@ -676,7 +676,7 @@ async function crearUsuarioMaestro() {
   const tokens = parseInt(document.getElementById("newT").value);
   const isPro = document.getElementById("newIsPro").checked;
   if (!newUser || !newPass) return alert("Faltan datos.");
-  const res = await fetch("/api/admin/create-user", { method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({newUser, newPass, tokens, isPro}) });
+  const res = await fetch("/api/admin/create-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({newUser, newPass, tokens, isPro}) });
   const data = await res.json();
   alert(data.msg);
   if (data.ok) { document.getElementById("newU").value=""; document.getElementById("newP").value=""; loadStats(); }
