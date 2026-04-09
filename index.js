@@ -24,20 +24,88 @@ const rateLimit = require("express-rate-limit");
 
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // [SEC] Reducido a 10MB
 
 const app = express();
-app.use(helmet({ contentSecurityPolicy: false })); // Basic security headers, CSP false to avoid breaking
+
+// ============================================================
+// [SEC-1] HEADERS DE SEGURIDAD — Helmet con CSP, HSTS, frameguard
+// ============================================================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["https://www.paypal.com", "https://sdk.mercadopago.com"],
+    }
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true,
+}));
+
 app.set('trust proxy', 1);
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json({ limit: '50mb' }));
+
+// ============================================================
+// [SEC-2] CORS RESTRICTIVO — solo origen permitido
+// ============================================================
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'https://debugai-sgew.onrender.com';
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sin origen (ej. Postman en dev, webhooks de MP/PayPal)
+    if (!origin) return callback(null, true);
+    if (origin === ALLOWED_ORIGIN || origin === 'http://localhost:3000') {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS: Origen no autorizado'));
+  },
+  optionsSuccessStatus: 200
+}));
+
+app.use(express.json({ limit: '5mb' })); // [SEC] Reducido de 50mb a 5mb
 
 // Servir archivos estáticos (logo, icon, sw.js, etc.) ANTES del limiter para no bloquear recursos básicos
 app.use(express.static(__dirname, { index: false }));
 
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 2000, message: { ok: false, msg: "Límite global excedido." } });
-const authLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, message: { ok: false, msg: "Demasiados intentos. Bloqueado temporalmente." } });
-const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { ok: false, msg: "Intrusión detectada." } });
+// ============================================================
+// [SEC-3] RATE LIMITING AVANZADO
+// ============================================================
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,                           // [SEC] Rebajado de 2000 a 300 peticiones/IP/15min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, msg: "Límite de solicitudes excedido. Intenta en unos minutos." }
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,               // [SEC] Rate limit ESTRICTO para endpoints de IA
+  max: 20,                           // 20 mensajes por minuto por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, msg: "Demasiadas solicitudes a la IA. Espera un momento." }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, msg: "Demasiados intentos. Bloqueado temporalmente." }
+});
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, msg: "Intrusión detectada. Acceso bloqueado." }
+});
 
 app.use(globalLimiter);
 
@@ -156,15 +224,19 @@ async function registrarEvento(username, tipo_evento, metadata = {}) {
   }
 }
 
+// ============================================================
+// [SEC-4] MIDDLEWARE DE AUTENTICACIÓN — JWT seguro con HTTP 401
+// ============================================================
 function auth(req, res, next) {
   const token = req.headers.authorization;
-  if (!token) return res.json({ ok: false, msg: "No autorizado" });
+  if (!token) return res.status(401).json({ ok: false, msg: "No autorizado" });
   try {
     const decoded = jwt.verify(token, SECRET);
+    if (!decoded.user) return res.status(401).json({ ok: false, msg: "Token inválido" });
     req.user = decoded.user;
     next();
   } catch {
-    return res.json({ ok: false, msg: "Token inválido" });
+    return res.status(401).json({ ok: false, msg: "Token inválido o expirado" });
   }
 }
 
@@ -384,15 +456,19 @@ app.post("/login", authLimiter, async (req, res) => {
   
   const u = xss(user.trim());
   const p = pass.trim();
-  
+
+  // [SEC-5] Validación de inputs con longitud máxima
+  if (u.length < 2 || u.length > 50) return res.status(400).json({ ok: false, msg: "Nombre de usuario inválido (2-50 caracteres)." });
+  if (p.length < 4 || p.length > 100) return res.status(400).json({ ok: false, msg: "Contraseña inválida (4-100 caracteres)." });
+
   // [STAGING] Bloqueo de acceso privado
   const STAGING_MODE = process.env.STAGING_MODE !== 'false';
   const ALLOWED_USERS = ["axel", "test_user"];
   if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
      return res.status(403).json({ ok: false, msg: "El sistema está en Modo Staging Privado. Acceso denegado." });
   }
-  
-  console.log(`[LOGIN REQ] Intentando con: "${u}" / "${p}"`);
+
+  console.log(`[LOGIN REQ] Intento de acceso: "${u}"`); // [SEC] Sin loggear la contraseña
 
   // Búsqueda del Maestro
   const match = await db.get("SELECT * FROM users WHERE (LOWER(username) = LOWER(?) OR username = ?) AND password = ?", [u, u, p]);
@@ -415,7 +491,11 @@ app.post("/register", authLimiter, async (req, res) => {
   
   const u = xss(user.trim());
   const p = pass.trim();
-  
+
+  // [SEC-5] Validación de inputs con longitud máxima
+  if (u.length < 2 || u.length > 50) return res.status(400).json({ ok: false, msg: "Nombre de usuario inválido (2-50 caracteres)." });
+  if (p.length < 4 || p.length > 100) return res.status(400).json({ ok: false, msg: "Contraseña inválida (4-100 caracteres)." });
+
   // [STAGING] Bloqueo de registro público
   const STAGING_MODE = process.env.STAGING_MODE !== 'false';
   const ALLOWED_USERS = ["axel", "test_user"];
@@ -876,9 +956,21 @@ app.post("/regenerate-chat/:id", auth, async (req, res) => {
   res.json({ ok: true, ultimoMensaje: lastUserMsg });
 });
 
-app.post("/mensaje", globalLimiter, auth, async (req, res) => {
+app.post("/mensaje", aiLimiter, auth, async (req, res) => { // [SEC] aiLimiter estricto en lugar de globalLimiter
   const { chatId, image, rol, requestedModel, useWebSearch } = req.body;
   let { mensaje } = req.body;
+
+  // [SEC-6] Validación de inputs antes de llamar a la IA
+  if (!chatId || typeof chatId !== 'string' || chatId.length > 50) {
+    return res.status(400).json({ ok: false, msg: "chatId inválido." });
+  }
+  if (mensaje && typeof mensaje !== 'string') {
+    return res.status(400).json({ ok: false, msg: "Mensaje debe ser texto." });
+  }
+  if (mensaje && mensaje.length > 8000) {
+    return res.status(400).json({ ok: false, msg: "Mensaje demasiado largo (máx. 8000 caracteres)." });
+  }
+
   mensaje = mensaje ? xss(mensaje) : "";
 
   const chatRow = await db.get("SELECT * FROM chats WHERE id = ? AND username = ?", [chatId, req.user]);
@@ -1237,8 +1329,12 @@ REGLAS DE ORO:
       }
     }
   } catch (err) {
-    res.write("data: Error en servidor\n\ndata: [END]\n\n");
-    res.end();
+    // [SEC-7] Nunca exponer errores internos al cliente
+    console.error('[ERROR /mensaje]', err.message);
+    if (!res.writableEnded) {
+      res.write("data: " + JSON.stringify("⚠️ Error interno del servidor. Intenta de nuevo.") + "\ndata: [END]\n\n");
+      res.end();
+    }
   }
 });
 
