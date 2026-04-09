@@ -108,12 +108,20 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://www.paypal.com", 
+        "https://sdk.mercadopago.com", 
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com"
+      ],
+      scriptSrcAttr: ["'unsafe-inline'"], // [FIX] Permite onclick/onchange en HTML
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
-      frameSrc: ["https://www.paypal.com", "https://sdk.mercadopago.com"],
+      frameSrc: ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
     }
   },
   hsts: { maxAge: 31536000, includeSubDomains: true },
