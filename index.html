@@ -1608,6 +1608,45 @@
       }
     }
   </style>
+
+  <div id="pwa-update-toast" style="display:none; position:fixed; bottom:20px; right:20px; background:#fbbf24; color:#000; padding:12px 20px; border-radius:8px; z-index:9999; font-weight:bold; box-shadow:0 10px 25px rgba(0,0,0,0.5); transform: translateY(100px); transition: transform 0.3s ease-out;">
+    🚀 Nueva versión disponible. Actualizando...
+  </div>
+  <script>
+    if ("serviceWorker" in navigator) { 
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { 
+          refreshing = true; 
+          fetch('/api/metrics/update', { method: 'POST', credentials: 'omit' }).catch(()=>{});
+          window.location.reload(); 
+        }
+      });
+      window.addEventListener("load", () => { 
+        navigator.serviceWorker.register("/sw.js").then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Rollout Progresivo (30%)
+                if (Math.random() < 0.3) {
+                  const toast = document.getElementById('pwa-update-toast');
+                  if(toast) {
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.transform = 'translateY(0)'; }, 50);
+                  }
+                  setTimeout(() => {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }, 2000);
+                }
+              }
+            });
+          });
+        }).catch(()=>{});
+      }); 
+    }
+  </script>
+
 </head>
 
 <body>
@@ -3511,22 +3550,6 @@
 
     // Registro de Service Worker para PWA (Instalar en móvil)
     let deferredPrompt;
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('SW registrado:', reg.scope);
-        }).catch(err => console.log('SW Error:', err));
-      });
-
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) { 
-          refreshing = true; 
-          window.location.reload(); 
-        }
-      });
-    }
-
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;

@@ -603,6 +603,15 @@ app.post("/api/auth/logout", (req, res) => {
   res.json({ ok: true, msg: "Desconectado exitosamente" });
 });
 
+// [METRICS] Tracking de Actualizaciones PWA OTA
+app.post("/api/metrics/update", (req, res) => {
+  const isAuth = req.cookies?.authToken || req.headers?.authorization;
+  // Solo trackeamos silenciosamente en logs por ahora.
+  log.info('PWA_OTA_UPDATED', { userPath: isAuth ? 'AuthUser' : 'Guest' });
+  res.json({ ok: true });
+});
+
+
 app.post("/register", authLimiter, validate({
   user: { required: true, type: 'string', minLen: 2, maxLen: 50, isArray: false },
   pass: { required: true, type: 'string', minLen: 4, maxLen: 100, isArray: false },

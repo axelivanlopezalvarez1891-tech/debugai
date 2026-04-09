@@ -1,4 +1,4 @@
-const VERSION = 'debugai-v4.0.0';
+const VERSION = 'debugai-v5.0.0';
 const CACHE_NAME = `app-cache-${VERSION}`;
 const STATIC_ASSETS = [
   '/app',
@@ -9,7 +9,6 @@ const STATIC_ASSETS = [
 // Instalar y cachear los assets críticos del shell PWA
 self.addEventListener('install', event => {
   // skipWaiting() permite forzar a la nueva versión (sin esperar que el usuario cierre todas las pestañas)
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
@@ -51,4 +50,10 @@ self.addEventListener('fetch', event => {
       })
       .catch(() => caches.match(event.request))
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
