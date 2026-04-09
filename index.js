@@ -111,14 +111,15 @@ app.use(helmet({
       "script-src": [
         "'self'", 
         "'unsafe-inline'", 
+        "'unsafe-eval'", // [FIX] Requerido para Pyodide / WebAssembly
         "https://www.paypal.com", 
         "https://sdk.mercadopago.com", 
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com"
       ],
-      "script-src-attr": ["'unsafe-inline'"], // Requerido para onclick="..."
+      "script-src-attr": ["'unsafe-inline'"], // [FIX] Permite onclick/onchange en HTML
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      "font-src": ["'self'", "https://fonts.gstatic.com"],
+      "font-src": ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       "img-src": ["'self'", "data:", "https:"],
       "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://*.googleapis.com"],
       "frame-src": ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
