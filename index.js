@@ -603,11 +603,20 @@ app.post("/api/auth/logout", (req, res) => {
   res.json({ ok: true, msg: "Desconectado exitosamente" });
 });
 
+
+// [OTA] Kill Switch de Actualizaciones
+let disableUpdates = false; // Variable global (se puede mutar externamente)
+app.get("/api/config", (req, res) => {
+  // Cache breve de 30s
+  res.setHeader("Cache-Control", "public, max-age=30");
+  res.json({ disableUpdates });
+});
+
 // [METRICS] Tracking de Actualizaciones PWA OTA
 app.post("/api/metrics/update", (req, res) => {
   const isAuth = req.cookies?.authToken || req.headers?.authorization;
   // Solo trackeamos silenciosamente en logs por ahora.
-  log.info('PWA_OTA_UPDATED', { userPath: isAuth ? 'AuthUser' : 'Guest' });
+  const data = req.body || {}; log.info('PWA_OTA_UPDATED', { userPath: isAuth ? 'AuthUser' : 'Guest', body: data });
   res.json({ ok: true });
 });
 

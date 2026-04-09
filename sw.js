@@ -1,4 +1,4 @@
-const VERSION = 'debugai-v5.0.0';
+const VERSION = 'debugai-v6.0.0';
 const CACHE_NAME = `app-cache-${VERSION}`;
 const STATIC_ASSETS = [
   '/app',

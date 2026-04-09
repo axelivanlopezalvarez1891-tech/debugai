@@ -186,19 +186,56 @@
     }
   </style>
 
+  
   <div id="pwa-update-toast" style="display:none; position:fixed; bottom:20px; right:20px; background:#fbbf24; color:#000; padding:12px 20px; border-radius:8px; z-index:9999; font-weight:bold; box-shadow:0 10px 25px rgba(0,0,0,0.5); transform: translateY(100px); transition: transform 0.3s ease-out;">
     🚀 Nueva versión disponible. Actualizando...
   </div>
   <script>
     if ("serviceWorker" in navigator) { 
+      // Almacenamos la version conocida para trackear
+      if(!localStorage.getItem('pwa_version')) localStorage.setItem('pwa_version', 'v5.0.0');
+      
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) { 
           refreshing = true; 
-          fetch('/api/metrics/update', { method: 'POST', credentials: 'omit' }).catch(()=>{});
+          fetch('/api/metrics/update', { 
+              method: 'POST', 
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'omit',
+              body: JSON.stringify({
+                  from: localStorage.getItem('pwa_version'),
+                  to: 'v6.0.0', // nueva version
+                  timestamp: Date.now()
+              })
+          }).catch(()=>{});
+          localStorage.setItem('pwa_version', 'v6.0.0');
           window.location.reload(); 
         }
       });
+      
+      // UX Pro: Retry update if user is typing
+      async function trySafeUpdate(newWorker) {
+          if (document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.isContentEditable)) {
+              setTimeout(() => trySafeUpdate(newWorker), 3000);
+              return;
+          }
+          try {
+              const res = await fetch('/api/config');
+              const conf = await res.json();
+              if (conf.disableUpdates) return; // Kill switch triggered
+          } catch(e) {}
+          
+          const toast = document.getElementById('pwa-update-toast');
+          if(toast) {
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.transform = 'translateY(0)'; }, 50);
+          }
+          setTimeout(() => {
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }, 2000);
+      }
+
       window.addEventListener("load", () => { 
         navigator.serviceWorker.register("/sw.js").then(reg => {
           reg.addEventListener('updatefound', () => {
@@ -207,14 +244,7 @@
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // Rollout Progresivo (30%)
                 if (Math.random() < 0.3) {
-                  const toast = document.getElementById('pwa-update-toast');
-                  if(toast) {
-                    toast.style.display = 'block';
-                    setTimeout(() => { toast.style.transform = 'translateY(0)'; }, 50);
-                  }
-                  setTimeout(() => {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  }, 2000);
+                    trySafeUpdate(newWorker);
                 }
               }
             });
@@ -223,6 +253,7 @@
       }); 
     }
   </script>
+
 
 </head>
 <body>
