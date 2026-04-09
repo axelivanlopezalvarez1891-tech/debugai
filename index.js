@@ -22,6 +22,67 @@ const helmet = require("helmet");
 const xss = require("xss");
 const rateLimit = require("express-rate-limit");
 
+// ============================================================
+// [LOG] LOGGER ESTRUCTURADO — Seguro (sin passwords/tokens/keys)
+// ============================================================
+const log = {
+  info:  (msg, meta = {}) => console.log(JSON.stringify({ level: 'info',  ts: new Date().toISOString(), msg, ...meta })),
+  warn:  (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn',  ts: new Date().toISOString(), msg, ...meta })),
+  error: (msg, meta = {}) => console.error(JSON.stringify({ level: 'error', ts: new Date().toISOString(), msg, ...meta })),
+};
+
+// ============================================================
+// [VAL] VALIDADOR CENTRALIZADO — Evita duplicación y estandariza
+// ============================================================
+function validate(schema) {
+  return (req, res, next) => {
+    for (const [field, rules] of Object.entries(schema)) {
+      const val = req.body[field];
+      if (rules.required && (val === undefined || val === null || val === '')) {
+        return res.status(400).json({ ok: false, msg: `Campo '${field}' requerido.` });
+      }
+      if (val !== undefined) {
+        if (rules.type && typeof val !== rules.type) {
+          return res.status(400).json({ ok: false, msg: `Campo '${field}' debe ser ${rules.type}.` });
+        }
+        if (rules.maxLen && typeof val === 'string' && val.length > rules.maxLen) {
+          return res.status(400).json({ ok: false, msg: `'${field}' excede el máximo de ${rules.maxLen} caracteres.` });
+        }
+        if (rules.minLen && typeof val === 'string' && val.length < rules.minLen) {
+          return res.status(400).json({ ok: false, msg: `'${field}' requiere mínimo ${rules.minLen} caracteres.` });
+        }
+        if (rules.isArray === false && Array.isArray(val)) {
+          return res.status(400).json({ ok: false, msg: `'${field}' no puede ser un array.` });
+        }
+      }
+    }
+    next();
+  };
+}
+
+// ============================================================
+// [ABUSE] LIMITADOR POR USUARIO (en memoria, 100 msgs/día)
+// Complementa el limitador por IP existente
+// ============================================================
+const userDailyUsage = new Map();
+function userRateLimiter(maxPerDay = 100) {
+  return (req, res, next) => {
+    if (!req.user) return next(); // Solo aplica a usuarios autenticados
+    const today = new Date().toISOString().split('T')[0];
+    const key = `${req.user}::${today}`;
+    const current = userDailyUsage.get(key) || 0;
+    if (current >= maxPerDay) {
+      log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user });
+      return res.status(429).json({ ok: false, msg: `Límite diario de ${maxPerDay} mensajes alcanzado. Renueva mañana o activa PRO.` });
+    }
+    userDailyUsage.set(key, current + 1);
+    next();
+  };
+}
+// Limpiar mapa de uso cada 24h para evitar fuga de memoria
+setInterval(() => userDailyUsage.clear(), 24 * 60 * 60 * 1000);
+
+
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // [SEC] Reducido a 10MB
@@ -108,6 +169,22 @@ const adminLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
+
+// ============================================================
+// [ABUSE] BLOQUEO DE PAYLOADS SOSPECHOSOS
+// Rechaza requests con Content-Type extraño o cuerpos que no son objetos
+// ============================================================
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    if (req.body !== undefined && typeof req.body !== 'object') {
+      return res.status(400).json({ ok: false, msg: 'Payload inválido.' });
+    }
+    if (Array.isArray(req.body)) {
+      return res.status(400).json({ ok: false, msg: 'Se esperaba un objeto, no un array.' });
+    }
+  }
+  next();
+});
 
 app.get("/", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "landing.html")); });
 app.get("/app", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "index.html")); });
@@ -225,35 +302,49 @@ async function registrarEvento(username, tipo_evento, metadata = {}) {
 }
 
 // ============================================================
-// [SEC-4] MIDDLEWARE DE AUTENTICACIÓN — JWT seguro con HTTP 401
+// [SEC-4] MIDDLEWARE DE AUTENTICACIÓN — JWT con hardening completo
+// Soporta Authorization header (actual) + cookie httpOnly (futuro)
 // ============================================================
 function auth(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.status(401).json({ ok: false, msg: "No autorizado" });
+  // Soporte dual: Authorization header (actual) o cookie segura (futuro)
+  const token = req.headers.authorization || req.cookies?.authToken;
+  if (!token) return res.status(401).json({ ok: false, msg: 'No autorizado' });
   try {
-    const decoded = jwt.verify(token, SECRET);
-    if (!decoded.user) return res.status(401).json({ ok: false, msg: "Token inválido" });
+    // [JWT] Verificación explícita: algoritmo forzado a HS256, clockTolerance 0
+    const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });
+    if (!decoded?.user || typeof decoded.user !== 'string') {
+      return res.status(401).json({ ok: false, msg: 'Token inválido' });
+    }
+    // [JWT] Verificar expiración explícitamente
+    if (decoded.exp && Date.now() / 1000 > decoded.exp) {
+      return res.status(401).json({ ok: false, msg: 'Sesión expirada. Vuelve a iniciar sesión.' });
+    }
     req.user = decoded.user;
     next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: "Token inválido o expirado" });
+  } catch (err) {
+    // [SEC] No exponer detalles del error JWT al cliente
+    log.warn('JWT_INVALID', { reason: err.name });
+    return res.status(401).json({ ok: false, msg: 'Token inválido o expirado' });
   }
 }
 
 async function requireMaster(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.status(401).json({ ok: false, msg: "No autorizado" });
+  const token = req.headers.authorization || req.cookies?.authToken;
+  if (!token) return res.status(401).json({ ok: false, msg: 'No autorizado' });
   try {
-    const decoded = jwt.verify(token, SECRET);
+    const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });
+    if (!decoded?.user) return res.status(401).json({ ok: false, msg: 'Token inválido' });
     req.user = decoded.user;
-    const user = await db.get("SELECT is_admin FROM users WHERE username = ?", [req.user]);
+    const user = await db.get('SELECT is_admin FROM users WHERE username = ?', [req.user]);
     if (!user || user.is_admin !== 1) {
-      registrarEvento(req.user, 'SECURITY_ALERT', { msg: "Intento de acceso admin fraudulento", endpoint: req.originalUrl });
-      return res.status(403).json({ ok: false, msg: "Prohibido. Nivel MASTER requerido." });
+      registrarEvento(req.user, 'SECURITY_ALERT', { msg: 'Intento de acceso admin fraudulento', endpoint: req.originalUrl });
+      log.warn('ADMIN_ACCESS_DENIED', { user: req.user, endpoint: req.originalUrl });
+      return res.status(403).json({ ok: false, msg: 'Prohibido. Nivel MASTER requerido.' });
     }
     next();
-  } catch {
-    return res.status(403).json({ ok: false, msg: "Token inválido" });
+  } catch (err) {
+    log.warn('JWT_INVALID_ADMIN', { reason: err.name });
+    return res.status(403).json({ ok: false, msg: 'Token inválido' });
   }
 }
 
@@ -450,16 +541,15 @@ app.post("/api/admin/create-user", requireMaster, async (req, res) => {
 });
 
 /* --- AUTH ENDPOINTS --- */
-app.post("/login", authLimiter, async (req, res) => {
+app.post("/login", authLimiter, validate({
+  user: { required: true, type: 'string', minLen: 2, maxLen: 50, isArray: false },
+  pass: { required: true, type: 'string', minLen: 4, maxLen: 100, isArray: false },
+}), async (req, res) => {
   const { user, pass } = req.body;
   if (!user || !pass) return res.json({ ok: false, msg: "Faltan datos" });
   
   const u = xss(user.trim());
   const p = pass.trim();
-
-  // [SEC-5] Validación de inputs con longitud máxima
-  if (u.length < 2 || u.length > 50) return res.status(400).json({ ok: false, msg: "Nombre de usuario inválido (2-50 caracteres)." });
-  if (p.length < 4 || p.length > 100) return res.status(400).json({ ok: false, msg: "Contraseña inválida (4-100 caracteres)." });
 
   // [STAGING] Bloqueo de acceso privado
   const STAGING_MODE = process.env.STAGING_MODE !== 'false';
@@ -468,33 +558,31 @@ app.post("/login", authLimiter, async (req, res) => {
      return res.status(403).json({ ok: false, msg: "El sistema está en Modo Staging Privado. Acceso denegado." });
   }
 
-  console.log(`[LOGIN REQ] Intento de acceso: "${u}"`); // [SEC] Sin loggear la contraseña
+  log.info('LOGIN_ATTEMPT', { user: u });
 
   // Búsqueda del Maestro
   const match = await db.get("SELECT * FROM users WHERE (LOWER(username) = LOWER(?) OR username = ?) AND password = ?", [u, u, p]);
   
   if (!match) {
-    console.log(`[LOGIN FAILED] Credenciales fallidas para: "${u}"`);
-    return res.json({ ok: false, msg: "Credenciales incorrectas" });
+    log.warn('LOGIN_FAILED', { user: u });
+    return res.json({ ok: false, msg: 'Credenciales incorrectas' });
   }
-  
-  console.log(`[LOGIN SUCCESS] Bienvenido, ${match.username}`);
+  log.info('LOGIN_SUCCESS', { user: match.username });
   await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = ?", [match.username]);
   
   const token = jwt.sign({ user: match.username }, SECRET, { expiresIn: "7d" });
   res.json({ ok: true, token });
 });
 
-app.post("/register", authLimiter, async (req, res) => {
+app.post("/register", authLimiter, validate({
+  user: { required: true, type: 'string', minLen: 2, maxLen: 50, isArray: false },
+  pass: { required: true, type: 'string', minLen: 4, maxLen: 100, isArray: false },
+}), async (req, res) => {
   const { user, pass } = req.body;
   if (!user || !pass) return res.json({ ok: false, msg: "Faltan datos" });
   
   const u = xss(user.trim());
   const p = pass.trim();
-
-  // [SEC-5] Validación de inputs con longitud máxima
-  if (u.length < 2 || u.length > 50) return res.status(400).json({ ok: false, msg: "Nombre de usuario inválido (2-50 caracteres)." });
-  if (p.length < 4 || p.length > 100) return res.status(400).json({ ok: false, msg: "Contraseña inválida (4-100 caracteres)." });
 
   // [STAGING] Bloqueo de registro público
   const STAGING_MODE = process.env.STAGING_MODE !== 'false';
@@ -956,7 +1044,7 @@ app.post("/regenerate-chat/:id", auth, async (req, res) => {
   res.json({ ok: true, ultimoMensaje: lastUserMsg });
 });
 
-app.post("/mensaje", aiLimiter, auth, async (req, res) => { // [SEC] aiLimiter estricto en lugar de globalLimiter
+app.post("/mensaje", aiLimiter, auth, userRateLimiter(100), async (req, res) => { // [ABUSE] userRateLimiter 100/día por usuario
   const { chatId, image, rol, requestedModel, useWebSearch } = req.body;
   let { mensaje } = req.body;
 
@@ -1235,12 +1323,18 @@ REGLAS DE ORO:
         }
     }
 
+    // [TIMEOUT] Añadir timeout de 30s a llamadas a la IA para evitar cuelgues
+    const AI_TIMEOUT_MS = 30000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+
     let response = await fetch(apiUrl, {
+      signal: controller.signal,
       method: "POST",
       headers: { 
         "Content-Type": "application/json", 
         "Authorization": "Bearer " + apiKey,
-        "HTTP-Referer": "http://localhost:3000",
+        "HTTP-Referer": ALLOWED_ORIGIN,
         "X-Title": "DebugAI PRO"
       },
       body: JSON.stringify({
@@ -1257,6 +1351,7 @@ REGLAS DE ORO:
         stream: true
       })
     });
+    clearTimeout(timeoutId);
 
     // SISTEMA DE FALLBACK ELITE: Si falla el modelo principal, intentamos con motor ultra-rápido Llama
     if (!response.ok) {
@@ -1339,7 +1434,19 @@ REGLAS DE ORO:
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor SQL corriendo en http://localhost:${PORT}`));
+app.listen(PORT, () => log.info('SERVER_START', { port: PORT }));
+
+// ============================================================
+// [ERR] MIDDLEWARE GLOBAL DE ERRORES — Captura cualquier error no manejado
+// Formato consistente, sin exponer stack traces al cliente
+// ============================================================
+app.use((err, req, res, next) => {
+  log.error('UNHANDLED_ERROR', { msg: err.message, path: req.path, method: req.method });
+  if (err.message?.includes('CORS')) {
+    return res.status(403).json({ ok: false, msg: 'Acceso no permitido.' });
+  }
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // ============================================================
 // FASE 3: MOTOR DE AUTOMATIZACIÓN (AUTOMATION ENGINE)
