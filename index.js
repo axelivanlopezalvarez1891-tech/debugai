@@ -111,17 +111,16 @@ app.use(helmet({
       "script-src": [
         "'self'", 
         "'unsafe-inline'", 
-        "'unsafe-eval'", // [FIX] Requerido para Pyodide / WebAssembly
+        "'unsafe-eval'", 
+        "https:", // [FIX] Permitir CDNs externos de forma amplia para evitar bloqueos
         "https://www.paypal.com", 
-        "https://sdk.mercadopago.com", 
-        "https://cdn.jsdelivr.net",
-        "https://cdnjs.cloudflare.com"
+        "https://sdk.mercadopago.com"
       ],
-      "script-src-attr": ["'unsafe-inline'"], // [FIX] Permite onclick/onchange en HTML
-      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      "font-src": ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      "script-src-attr": ["'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https:"],
+      "font-src": ["'self'", "data:", "https:"],
       "img-src": ["'self'", "data:", "https:"],
-      "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://*.googleapis.com"],
+      "connect-src": ["'self'", "https:", "wss:"], // [FIX] Necesario para Pyodide y APIs externas
       "frame-src": ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
     }
   },
