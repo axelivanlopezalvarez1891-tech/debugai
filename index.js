@@ -321,7 +321,10 @@ async function registrarEvento(username, tipo_evento, metadata = {}) {
 // ============================================================
 function auth(req, res, next) {
   // Soporte dual: Authorization header (actual) o cookie segura (futuro)
-  const token = req.headers.authorization || req.cookies?.authToken;
+  let token = req.cookies?.authToken;
+  if(!token && req.headers.authorization && req.headers.authorization !== 'cookie_mode') {
+    token = req.headers.authorization;
+  }
   if (!token) return res.status(401).json({ ok: false, msg: 'No autorizado' });
   try {
     // [JWT] Verificación explícita: algoritmo forzado a HS256, clockTolerance 0
@@ -343,7 +346,10 @@ function auth(req, res, next) {
 }
 
 async function requireMaster(req, res, next) {
-  const token = req.headers.authorization || req.cookies?.authToken;
+  let token = req.cookies?.authToken;
+  if(!token && req.headers.authorization && req.headers.authorization !== 'cookie_mode') {
+    token = req.headers.authorization;
+  }
   if (!token) return res.status(401).json({ ok: false, msg: 'No autorizado' });
   try {
     const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });

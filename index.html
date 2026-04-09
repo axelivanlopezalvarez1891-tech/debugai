@@ -1825,7 +1825,7 @@
       isCheckingGift = true;
       try {
         if (window.isPremiumUser) { await sincronizarHUD(); }
-        const res = await fetch(API + "/check-gift", { credentials: "include",  headers: { "Authorization": token } });
+        const res = await fetch(API + "/check-gift", { credentials: "include",  headers: { } });
         const data = await res.json();
         
         const badge = document.getElementById("inboxBadge");
@@ -1896,7 +1896,7 @@
        overlay.querySelector('.epic-blast-sub').innerHTML = `Sincronizando licencia Suprema...`;
        
        try {
-           const res = await fetch(API + "/claim-gift", { credentials: "include",  method: "POST", headers: { "Authorization": token } });
+           const res = await fetch(API + "/claim-gift", { credentials: "include",  method: "POST", headers: { } });
            const data = await res.json();
            
            setTimeout(() => { document.body.classList.remove("shake-global"); }, 400);
@@ -2372,7 +2372,7 @@
       try {
         await fetch(API + '/api/eventos/track', { credentials: "include", 
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': token },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tipo, metadata })
         });
       } catch (e) { /* silencioso, el evento no es crítico */ }
@@ -2534,7 +2534,7 @@
     }
 
     async function ejecutarEliminarCuenta() {
-      const res = await fetch(API + "/account", { credentials: "include",  method: "DELETE", headers: { "Authorization": token } });
+      const res = await fetch(API + "/account", { credentials: "include",  method: "DELETE", headers: { } });
       const data = await res.json();
       if (data.ok) {
         cerrarModal("modalEliminar");
@@ -2579,7 +2579,7 @@
     }
 
     async function sincronizarHUD() {
-      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { "Authorization": token } });
+      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { } });
       const data = await res.json();
       if (data.ok) {
         isPremiumUser = data.premium;
@@ -2685,7 +2685,7 @@
     }
 
     async function abrirPerfil() {
-      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { "Authorization": token } });
+      const res = await fetch(API + "/get-perfil", { credentials: "include",  headers: { } });
       const data = await res.json();
       if (data.ok) {
         document.getElementById("perfilNombre").value = data.nombre || "";
@@ -2697,7 +2697,7 @@
     async function guardarPerfil() {
       const nombre = document.getElementById("perfilNombre").value.trim();
       const rol = document.getElementById("perfilRol").value.trim();
-      await fetch(API + "/update-perfil", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ nombre, rol }) });
+      await fetch(API + "/update-perfil", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre, rol }) });
       cerrarModal("modalPerfil");
     }
 
@@ -2743,7 +2743,7 @@
         try {
           const res = await fetch(API + "/api/create-preference", { credentials: "include", 
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": token },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount: currentTokenQueue, isPro: isProBuying })
           });
           const data = await res.json();
@@ -2757,7 +2757,7 @@
         try {
           const res = await fetch(API + "/api/create-paypal-order", { credentials: "include", 
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": token },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount: currentTokenQueue, isPro: isProBuying })
           });
           const data = await res.json();
@@ -2791,7 +2791,7 @@
         formData.append("document", file);
         showToast("Extrayendo texto interactivo...", "info");
         fetch(API + "/upload-document", { credentials: "include", 
-          method: "POST", headers: { "Authorization": token }, body: formData
+          method: "POST", headers: { }, body: formData
         }).then(r => r.json()).then(data => {
           if (data.ok) {
             if (inputMsg.value.trim() !== '') inputMsg.value += '\n\n';
@@ -2870,7 +2870,7 @@
 
 
     async function cargarChats() {
-      const res = await fetch(API + "/chats", { credentials: "include",  headers: { "Authorization": token } });
+      const res = await fetch(API + "/chats", { credentials: "include",  headers: { } });
       const data = await res.json();
       chatListBox.innerHTML = "";
       if (data.chats && data.chats.length > 0) {
@@ -2917,7 +2917,7 @@
             moveBtn.onclick = (e) => {
               e.stopPropagation();
               const fName = prompt("Nombre de la carpeta (vacío para quitar):", chat.folder || "");
-              if (fName !== null) fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: chat.id, folder: fName }) }).then(() => cargarChats());
+              if (fName !== null) fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: chat.id, folder: fName }) }).then(() => cargarChats());
             };
 
             const delBtn = document.createElement("button"); delBtn.className = "btn-delete-chat";
@@ -2932,13 +2932,13 @@
     }
 
     async function crearChat(conIntro = false) {
-      const res = await fetch(API + "/crear-chat", { credentials: "include",  method: "POST", headers: { "Authorization": token, "Content-Type": "application/json" }, body: JSON.stringify({ intro: conIntro }) });
+      const res = await fetch(API + "/crear-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ intro: conIntro }) });
       const data = await res.json();
       if (data.ok) { await cargarChats(); seleccionarChat(data.chat.id, data.chat.mensajes); }
     }
 
     async function eliminarChat(id) {
-      const res = await fetch(API + "/chat/" + id, { credentials: "include",  method: "DELETE", headers: { "Authorization": token } });
+      const res = await fetch(API + "/chat/" + id, { credentials: "include",  method: "DELETE", headers: { } });
       const data = await res.json();
       if (data.ok) {
         if (currentChatId === id) {
@@ -3110,7 +3110,7 @@
       currentAbortController = new AbortController();
 
       try {
-        const res = await fetch(API + "/mensaje", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify(payload), signal: currentAbortController.signal });
+        const res = await fetch(API + "/mensaje", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: currentAbortController.signal });
         
         // [FIX 429] Detectar rate limit ANTES de intentar leer como SSE
         if (res.status === 429) {
@@ -3223,7 +3223,7 @@
 
         fetch(API + "/api/capture-paypal-order", { credentials: "include", 
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": token },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderID: orderId, type, qty })
         }).then(r => r.json()).then(data => {
             if (data.ok) {
@@ -3416,7 +3416,7 @@
     }
 
     async function regenerarUltimo() {
-      const res = await fetch(API + "/regenerate-chat/" + currentChatId, { credentials: "include",  method: "POST", headers: { "Authorization": token } });
+      const res = await fetch(API + "/regenerate-chat/" + currentChatId, { credentials: "include",  method: "POST", headers: { } });
       const data = await res.json();
       if (data.ok) {
         const msgs = document.querySelectorAll('.msg-wrapper');
@@ -3465,7 +3465,7 @@
       await crearChat(true);
 
       if (currentChatId) {
-        await fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json", "Authorization": token }, body: JSON.stringify({ id: currentChatId, folder: config.folder }) });
+        await fetch(API + "/update-chat", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: currentChatId, folder: config.folder }) });
         document.getElementById('inputMsg').value = config.prompt;
         autoExpand(document.getElementById('inputMsg'));
       }

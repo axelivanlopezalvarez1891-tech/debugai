@@ -406,7 +406,7 @@ async function loadStats() {
   const statusEl = document.getElementById('statusFeedback');
   statusEl.style.display = "none";
   try {
-    const res = await fetch("/api/admin/stats", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" });
+    const res = await fetch("/api/admin/stats", { credentials: "include",  headers: { }, cache: "no-store" });
     const data = await res.json();
 
     if (data.ok) {
@@ -478,8 +478,8 @@ async function loadStats() {
 async function loadAnaliticas() {
   try {
     const [resAn, resEv] = await Promise.all([
-      fetch("/api/admin/analiticas", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" }),
-      fetch("/api/admin/eventos?limit=50", { credentials: "include",  headers: { "Authorization": token }, cache: "no-store" })
+      fetch("/api/admin/analiticas", { credentials: "include",  headers: { }, cache: "no-store" }),
+      fetch("/api/admin/eventos?limit=50", { credentials: "include",  headers: { }, cache: "no-store" })
     ]);
     const an = await resAn.json();
     const ev = await resEv.json();
@@ -520,8 +520,7 @@ async function loadAnaliticas() {
         'MSG_ENVIADO': 'badge-msg',
         'SIN_TOKENS': 'badge-sin',
         'COMPRA': 'badge-compra',
-        'CLICK_PRO': 'badge-clickpro',
-      };
+        'CLICK_PRO': 'badge-clickpro' };
       document.getElementById('eventRows').innerHTML = ev.eventos.length > 0
         ? ev.eventos.map(e => {
             const meta = (() => { try { const m = JSON.parse(e.metadata); return Object.entries(m).map(([k,v]) => `<span class="meta-tag">${k}: ${v}</span>`).join(''); } catch { return ''; } })();
@@ -553,8 +552,7 @@ function renderActividadChart(labels, data) {
         backgroundColor: 'rgba(99,102,241,0.5)',
         borderColor: '#6366f1',
         borderWidth: 2,
-        borderRadius: 6,
-      }]
+        borderRadius: 6 }]
     },
     options: {
       responsive: true,
@@ -583,8 +581,7 @@ function renderEventosChart(labels, data) {
         data: data.length > 0 ? data : [1],
         backgroundColor: bgColors.length > 0 ? bgColors : ['rgba(156,163,175,0.3)'],
         borderColor: borderColors.length > 0 ? borderColors : ['#9ca3af'],
-        borderWidth: 2,
-      }]
+        borderWidth: 2 }]
     },
     options: {
       responsive: true,
@@ -616,7 +613,7 @@ async function submitProTime(durationStr) {
   const label = durationStr === 'null' ? 'DE POR VIDA' : (labels[durationStr] || durationStr + 'ms');
   if (durationStr !== "null") duration = parseInt(durationStr);
   if (!confirm(`¿Estás seguro?\n\n→ Usuario: ${currentTargetPro}\n→ Acceso PRO: ${label}`)) return;
-  const res = await fetch("/api/admin/upgrade-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:currentTargetPro, duration}) });
+  const res = await fetch("/api/admin/upgrade-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json" }, cache:"no-store", body:JSON.stringify({targetUser:currentTargetPro, duration}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -628,7 +625,7 @@ async function giftTokens(targetUser) {
   if (qty === null) return;
   const amount = parseInt(qty);
   if (isNaN(amount) || amount <= 0) return alert("Ingresá un número válido.");
-  const res = await fetch("/api/admin/gift-tokens", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser, amount}) });
+  const res = await fetch("/api/admin/gift-tokens", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json" }, cache:"no-store", body:JSON.stringify({targetUser, amount}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -636,7 +633,7 @@ async function giftTokens(targetUser) {
 
 async function deleteUser(targetUser) {
   if (!confirm(`¿ESTÁS SEGURO?\n\nEsta acción ELIMINARÁ permanentemente la cuenta de:\n→ ${targetUser}`)) return;
-  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser}) });
+  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json" }, cache:"no-store", body:JSON.stringify({targetUser}) });
   const data = await res.json();
   alert(data.msg);
   loadStats();
@@ -662,7 +659,7 @@ async function deleteSelectedUsers() {
   const usersToDelete = Array.from(cbs).map(cb => cb.value);
   if (!confirm(`⚠️ ¿Eliminar ${usersToDelete.length} usuario(s)?\n\nEsta acción NO se puede deshacer.`)) return;
   document.getElementById('btnDeleteSelected').innerText = "Borrando...";
-  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({targetUser:usersToDelete}) });
+  const res = await fetch("/api/admin/delete-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json" }, cache:"no-store", body:JSON.stringify({targetUser:usersToDelete}) });
   const data = await res.json();
   alert(data.msg);
   document.getElementById('selectAll').checked = false;
@@ -676,7 +673,7 @@ async function crearUsuarioMaestro() {
   const tokens = parseInt(document.getElementById("newT").value);
   const isPro = document.getElementById("newIsPro").checked;
   if (!newUser || !newPass) return alert("Faltan datos.");
-  const res = await fetch("/api/admin/create-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json","Authorization":token}, cache:"no-store", body:JSON.stringify({newUser, newPass, tokens, isPro}) });
+  const res = await fetch("/api/admin/create-user", { credentials: "include",  method:"POST", headers:{"Content-Type":"application/json" }, cache:"no-store", body:JSON.stringify({newUser, newPass, tokens, isPro}) });
   const data = await res.json();
   alert(data.msg);
   if (data.ok) { document.getElementById("newU").value=""; document.getElementById("newP").value=""; loadStats(); }
