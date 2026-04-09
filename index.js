@@ -112,15 +112,15 @@ app.use(helmet({
         "'self'", 
         "'unsafe-inline'", 
         "'unsafe-eval'", 
-        "https:", // [FIX] Permitir CDNs externos de forma amplia para evitar bloqueos
+        "https:", // [FIX CRÍTICO] Permitir CDNs para unblock marcado, chartjs, pyodide
         "https://www.paypal.com", 
         "https://sdk.mercadopago.com"
       ],
       "script-src-attr": ["'unsafe-inline'"],
-      "style-src": ["'self'", "'unsafe-inline'", "https:"],
-      "font-src": ["'self'", "data:", "https:"],
+      "style-src": ["'self'", "'unsafe-inline'", "https:", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "data:", "https:", "https://fonts.gstatic.com"],
       "img-src": ["'self'", "data:", "https:"],
-      "connect-src": ["'self'", "https:", "wss:"], // [FIX] Necesario para Pyodide y APIs externas
+      "connect-src": ["'self'", "https:", "wss:"], // [FIX] Necesario para scripts externos y APIs
       "frame-src": ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
     }
   },
@@ -152,8 +152,8 @@ app.use(cors({
 app.use(express.json({ limit: '5mb' })); 
 app.use(cookieParser()); // [SEC] Parsear cookies seguras
 
-// Servir archivos estáticos (logo, icon, sw.js, etc.) ANTES del limiter para no bloquear recursos básicos
-app.use(express.static(__dirname, { index: false }));
+// [SEC-0] Servir archivos estáticos SOLO del directorio public
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 // ============================================================
 // [SEC-3] RATE LIMITING AVANZADO
@@ -208,9 +208,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "landing.html")); });
-app.get("/app", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "index.html")); });
-app.get("/admin", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "admin.html")); });
+app.get("/", (req, res) => { res.sendFile(path.join(__dirname, "public", "landing.html")); });
+app.get("/app", (req, res) => { res.sendFile(path.join(__dirname, "public", "index.html")); });
+app.get("/admin", (req, res) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private'); res.sendFile(path.join(__dirname, "public", "admin.html")); });
 
 const SECRET = process.env.JWT_SECRET || "debugai_ultra_secure_secret_2026";
 let db;
