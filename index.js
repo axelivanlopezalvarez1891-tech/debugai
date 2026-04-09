@@ -107,8 +107,8 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: [
+      "default-src": ["'self'"],
+      "script-src": [
         "'self'", 
         "'unsafe-inline'", 
         "https://www.paypal.com", 
@@ -116,12 +116,12 @@ app.use(helmet({
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com"
       ],
-      scriptSrcAttr: ["'unsafe-inline'"], // [FIX] Permite onclick/onchange en HTML
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      frameSrc: ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
+      "script-src-attr": ["'unsafe-inline'"], // Requerido para onclick="..."
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com"],
+      "img-src": ["'self'", "data:", "https:"],
+      "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://*.googleapis.com"],
+      "frame-src": ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
     }
   },
   hsts: { maxAge: 31536000, includeSubDomains: true },
