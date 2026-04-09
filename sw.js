@@ -1,4 +1,5 @@
-const CACHE_NAME = 'debugai-v3';
+const VERSION = 'debugai-v4.0.0';
+const CACHE_NAME = `app-cache-${VERSION}`;
 const STATIC_ASSETS = [
   '/app',
   '/manifest.json',
@@ -7,10 +8,11 @@ const STATIC_ASSETS = [
 
 // Instalar y cachear los assets críticos del shell PWA
 self.addEventListener('install', event => {
+  // skipWaiting() permite forzar a la nueva versión (sin esperar que el usuario cierre todas las pestañas)
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
-      .then(() => self.skipWaiting())
   );
 });
 

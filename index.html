@@ -3517,6 +3517,14 @@
           console.log('SW registrado:', reg.scope);
         }).catch(err => console.log('SW Error:', err));
       });
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { 
+          refreshing = true; 
+          window.location.reload(); 
+        }
+      });
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
