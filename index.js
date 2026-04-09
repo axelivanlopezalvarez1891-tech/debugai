@@ -69,13 +69,13 @@ function userRateLimiter() {
   return async (req, res, next) => {
     if (!req.user) return next();
     
-    // Calcular límite dinámicamente: FREE (20) vs PRO/Admin (200)
+    // Calcular límite dinámicamente: FREE (20) vs PRO/Admin (200) vs PLUS (80)
     let maxPerDay = 20; // Default FREE
     try {
       const u = await db.get("SELECT premium, is_admin FROM users WHERE username = ?", [req.user]);
       if (u) {
-         const isPro = u.premium === 1 || u.premium > Date.now() || u.is_admin === 1;
-         if (isPro) maxPerDay = 200;
+         if (u.premium === 2) maxPerDay = 80; // PLUS
+         else if (u.premium === 1 || u.premium > Date.now() || u.is_admin === 1) maxPerDay = 200; // PRO
       }
     } catch(e) {}
 
@@ -85,7 +85,7 @@ function userRateLimiter() {
     
     if (current >= maxPerDay) {
       log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user, planLimit: maxPerDay });
-      return res.status(429).json({ ok: false, msg: `Límite diario de ${maxPerDay} mensajes alcanzado. ${maxPerDay === 20 ? '¡Actualiza a PRO para 200 mensajes!' : 'Límite de seguridad de red alcanzado.'}` });
+      return res.status(200).json({ ok: false, upgradeRequired: true, msg: `Has alcanzado tu límite diario. Mejora a PLUS o PRO para continuar.` });
     }
     userDailyUsage.set(key, current + 1);
     next();
@@ -591,7 +591,7 @@ app.post("/login", authLimiter, validate({
   res.cookie('authToken', token, {
     httpOnly: true,
     secure: isProd, // True en la nube (HTTPS)
-    sameSite: 'Strict',
+    sameSite: 'Lax', // [FIX MOBILE] Lax permite que PWA y Mobile guarden la sesión correctamente
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
   });
 
@@ -599,7 +599,7 @@ app.post("/login", authLimiter, validate({
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie('authToken', { httpOnly: true, secure: process.env.RENDER || process.env.NODE_ENV === 'production', sameSite: 'Strict' });
+  res.clearCookie('authToken', { httpOnly: true, secure: process.env.RENDER || process.env.NODE_ENV === 'production', sameSite: 'Lax' });
   res.json({ ok: true, msg: "Desconectado exitosamente" });
 });
 
@@ -631,7 +631,7 @@ app.post("/register", authLimiter, validate({
   res.cookie('authToken', token, {
     httpOnly: true,
     secure: isProd,
-    sameSite: 'Strict',
+    sameSite: 'Lax', // [FIX] Necesario para evitar bugs de login en móvil
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
@@ -659,7 +659,17 @@ app.get("/get-perfil", auth, async (req, res) => {
   }
 
   const isActuallyPremium = u.premium === 1 || u.premium > Date.now() || u.is_admin === 1;
-  res.json({ ok: true, nombre: u.nombre || "", rol: u.rol || "", premium: isActuallyPremium, is_admin: u.is_admin === 1, creditos: u.creditos, abVariant: flags.ab_variant });
+  const isPlus = u.premium === 2;
+  
+  let planDesc = 'FREE';
+  let maxMsgs = 20;
+  if (isPlus) { planDesc = 'PLUS'; maxMsgs = 80; }
+  if (isActuallyPremium) { planDesc = 'PRO'; maxMsgs = 200; }
+  
+  const today = new Date().toISOString().split('T')[0];
+  const msgsUsadosHoy = userDailyUsage.get(`${req.user}::${today}`) || 0;
+
+  res.json({ ok: true, nombre: u.nombre || "", rol: u.rol || "", premium: isActuallyPremium, is_admin: u.is_admin === 1, creditos: u.creditos, abVariant: flags.ab_variant, planDesc, maxMsgs, msgsUsadosHoy });
 });
 
 app.post("/update-perfil", auth, async (req, res) => {

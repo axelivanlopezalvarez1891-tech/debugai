@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DebugAI - Tu Copiloto Definitivo</title>
+  <link rel="manifest" href="/manifest.json">
+  <script>if("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js"); }); }</script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -205,7 +207,7 @@
     <p class="subtitle">Análisis profundo de código, Visión Artificial y búsqueda en tiempo real. <strong>Consigue DebugAI PRO por solo $14.99</strong> y escala tu productividad al infinito.</p>
     <div style="display:flex; gap:15px; justify-content:center; flex-wrap: wrap;">
       <a href="/app" class="cta-btn">Probar PRO ($14.99)</a>
-      <a href="/app" class="cta-btn" style="background:transparent; border:1px solid var(--accent); box-shadow:none;">💻 App Web / Móvil</a>
+      <button id="btn-install-pwa" class="cta-btn" style="background:transparent; border:1px solid var(--accent); box-shadow:none;">📲 Instalar App Libre</button>
     </div>
     <p style="font-size:12px; color:var(--text-muted); margin-top:20px;">🔒 Cancelá cuando quieras. Sin complicaciones.</p>
   </section>
@@ -256,6 +258,39 @@ return () => abortController.abort();
       <p>No solo te da código. Dibuja diagramas Mermaid en vivo y ejecuta Python directamente en tu navegador de forma nativa.</p>
     </div>
   </section>
+
+
+<script>
+  let deferredPrompt;
+  const installBtn = document.getElementById('btn-install-pwa');
+  if(installBtn) installBtn.style.display = 'none';
+  
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if(installBtn) {
+      installBtn.style.display = 'inline-block';
+      installBtn.innerHTML = '📲 Descargar App NATIVA';
+    }
+  });
+  
+  if(installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt !== null) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') { installBtn.style.display = 'none'; }
+        deferredPrompt = null;
+      } else {
+        window.location.href = '/app';
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    if(installBtn) installBtn.style.display = 'none';
+  });
+</script>
 
 </body>
 </html>
