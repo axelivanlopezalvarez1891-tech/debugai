@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import cookieParser from 'cookie-parser';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -61,19 +62,30 @@ function validate(schema) {
 }
 
 // ============================================================
-// [ABUSE] LIMITADOR POR USUARIO (en memoria, 100 msgs/día)
-// Complementa el limitador por IP existente
+// [ABUSE] LIMITADOR POR USUARIO + CÁLCULO DE PLANES
 // ============================================================
 const userDailyUsage = new Map();
-function userRateLimiter(maxPerDay = 100) {
-  return (req, res, next) => {
-    if (!req.user) return next(); // Solo aplica a usuarios autenticados
+function userRateLimiter() {
+  return async (req, res, next) => {
+    if (!req.user) return next();
+    
+    // Calcular límite dinámicamente: FREE (20) vs PRO/Admin (200)
+    let maxPerDay = 20; // Default FREE
+    try {
+      const u = await db.get("SELECT premium, is_admin FROM users WHERE username = ?", [req.user]);
+      if (u) {
+         const isPro = u.premium === 1 || u.premium > Date.now() || u.is_admin === 1;
+         if (isPro) maxPerDay = 200;
+      }
+    } catch(e) {}
+
     const today = new Date().toISOString().split('T')[0];
     const key = `${req.user}::${today}`;
     const current = userDailyUsage.get(key) || 0;
+    
     if (current >= maxPerDay) {
-      log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user });
-      return res.status(429).json({ ok: false, msg: `Límite diario de ${maxPerDay} mensajes alcanzado. Renueva mañana o activa PRO.` });
+      log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user, planLimit: maxPerDay });
+      return res.status(429).json({ ok: false, msg: `Límite diario de ${maxPerDay} mensajes alcanzado. ${maxPerDay === 20 ? '¡Actualiza a PRO para 200 mensajes!' : 'Límite de seguridad de red alcanzado.'}` });
     }
     userDailyUsage.set(key, current + 1);
     next();
@@ -125,10 +137,12 @@ app.use(cors({
     }
     return callback(new Error('CORS: Origen no autorizado'));
   },
+  credentials: true, // [SEC] Requerido para cookies HTTPOnly
   optionsSuccessStatus: 200
 }));
 
-app.use(express.json({ limit: '5mb' })); // [SEC] Reducido de 50mb a 5mb
+app.use(express.json({ limit: '5mb' })); 
+app.use(cookieParser()); // [SEC] Parsear cookies seguras
 
 // Servir archivos estáticos (logo, icon, sw.js, etc.) ANTES del limiter para no bloquear recursos básicos
 app.use(express.static(__dirname, { index: false }));
@@ -571,7 +585,22 @@ app.post("/login", authLimiter, validate({
   await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = ?", [match.username]);
   
   const token = jwt.sign({ user: match.username }, SECRET, { expiresIn: "7d" });
+  
+  // [SAAS] Seteo de Cookie Segura HTTPOnly
+  const isProd = process.env.RENDER || process.env.NODE_ENV === 'production';
+  res.cookie('authToken', token, {
+    httpOnly: true,
+    secure: isProd, // True en la nube (HTTPS)
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+  });
+
   res.json({ ok: true, token });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie('authToken', { httpOnly: true, secure: process.env.RENDER || process.env.NODE_ENV === 'production', sameSite: 'Strict' });
+  res.json({ ok: true, msg: "Desconectado exitosamente" });
 });
 
 app.post("/register", authLimiter, validate({
@@ -595,7 +624,18 @@ app.post("/register", authLimiter, validate({
   if (existing) return res.json({ ok: false, msg: "Este usuario ya está en nuestra base de datos." });
   
   await db.run("INSERT INTO users (username, password, creditos, premium, is_admin) VALUES (?, ?, 30, 0, 0)", [u, p]);
-  res.json({ ok: true, msg: "🎁 ¡REGALO ACTIVADO!: Has recibido 30 tokens gratis para comenzar. Inicia sesión ahora." });
+  
+  // [SAAS] Auto-login tras registro con Cookie Segura
+  const token = jwt.sign({ user: u }, SECRET, { expiresIn: "7d" });
+  const isProd = process.env.RENDER || process.env.NODE_ENV === 'production';
+  res.cookie('authToken', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+
+  res.json({ ok: true, msg: "🎁 ¡REGALO ACTIVADO!: Has recibido 30 tokens gratis para comenzar. Inicia sesión ahora.", token });
 });
 
 app.get("/get-perfil", auth, async (req, res) => {
@@ -1044,7 +1084,12 @@ app.post("/regenerate-chat/:id", auth, async (req, res) => {
   res.json({ ok: true, ultimoMensaje: lastUserMsg });
 });
 
-app.post("/mensaje", aiLimiter, auth, userRateLimiter(100), async (req, res) => { // [ABUSE] userRateLimiter 100/día por usuario
+// ============================================================
+// [SAAS CACHE] MOTOR CACHE ANTI-DUPLICADOS IA (Evitar gastos)
+// ============================================================
+const aiResponseCache = new Map();
+
+app.post("/mensaje", aiLimiter, auth, userRateLimiter(), async (req, res) => { 
   const { chatId, image, rol, requestedModel, useWebSearch } = req.body;
   let { mensaje } = req.body;
 
@@ -1060,6 +1105,17 @@ app.post("/mensaje", aiLimiter, auth, userRateLimiter(100), async (req, res) => 
   }
 
   mensaje = mensaje ? xss(mensaje) : "";
+
+  // [SAAS] CACHÉ DE RESPUESTAS CORTAS INMEDIATO
+  const cacheKey = `${req.user}_${chatId}_${mensaje.trim()}_${requestedModel || ''}`;
+  if (aiResponseCache.has(cacheKey)) {
+      log.info('AI_CACHE_HIT', { user: req.user });
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.write("data: " + JSON.stringify(aiResponseCache.get(cacheKey)) + "\n\n");
+      res.write("data: [END]\n\n");
+      return res.end();
+  }
 
   const chatRow = await db.get("SELECT * FROM chats WHERE id = ? AND username = ?", [chatId, req.user]);
   if (!chatRow) return res.json({ ok: false, msg: "Chat no encontrado" });
@@ -1412,6 +1468,13 @@ REGLAS DE ORO:
 
           mensajes.push({ role: "assistant", content: cleanR });
           await db.run("UPDATE chats SET mensajes = ? WHERE id = ?", [JSON.stringify(mensajes), chatId]);
+          
+          // Guardar en caché si es corta
+          if (cleanR.length < 500) {
+             aiResponseCache.set(cacheKey, cleanR);
+             setTimeout(() => aiResponseCache.delete(cacheKey), 60 * 1000); // Expirar en 1 min
+          }
+
           return;
         }
         try {
