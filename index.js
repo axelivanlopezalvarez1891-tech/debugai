@@ -291,13 +291,27 @@ async function initDB() {
           }
         }
       }
-      fs.renameSync("users.json", "users.backup.json");
-      fs.renameSync("chats.json", "chats.backup.json");
+      fs.renameSync("users.backup.json", "users.migrated.json");
+      fs.renameSync("chats.backup.json", "chats.migrated.json");
       console.log("Migración completada con éxito.");
     } catch (e) {
       console.error("Error migrando DB:", e);
     }
   }
+
+  // [ADMIN] Restauración automática de cuenta Maestra
+  try {
+    const adminUser = 'AXEL';
+    const adminPass = 'Axel1891';
+    const existing = await db.get("SELECT username FROM users WHERE username = ?", [adminUser]);
+    if (!existing) {
+       await db.run("INSERT INTO users (username, password, is_admin, premium, creditos) VALUES (?, ?, 1, 1, 9999)", [adminUser, adminPass]);
+       log.info('ADMIN_AUTO_CREATED', { user: adminUser });
+    } else {
+       await db.run("UPDATE users SET password = ?, is_admin = 1, premium = 1, creditos = 9999 WHERE username = ?", [adminPass, adminUser]);
+       log.info('ADMIN_RESTORED', { user: adminUser });
+    }
+  } catch (e) { console.error("Error al restaurar Admin:", e); }
 
   // [STAGING] Crear cuenta test_user automáticamente
   const testUserExists = await db.get("SELECT username FROM users WHERE username = 'test_user'");
@@ -582,15 +596,15 @@ app.post("/login", authLimiter, validate({
 
   // [STAGING] Bloqueo de acceso privado
   const STAGING_MODE = process.env.STAGING_MODE !== 'false';
-  const ALLOWED_USERS = ["axel", "test_user"];
-  if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
+  const ALLOWED_USERS = ["axel", "test_user", "AXEL"];
+  if (STAGING_MODE && !ALLOWED_USERS.includes(u) && !ALLOWED_USERS.includes(u.toLowerCase())) {
      return res.status(403).json({ ok: false, msg: "El sistema está en Modo Staging Privado. Acceso denegado." });
   }
 
   log.info('LOGIN_ATTEMPT', { user: u });
 
   // Búsqueda del Maestro
-  const match = await db.get("SELECT * FROM users WHERE (LOWER(username) = LOWER(?) OR username = ?) AND password = ?", [u, u, p]);
+  const match = await db.get("SELECT * FROM users WHERE (username = ? OR LOWER(username) = LOWER(?)) AND password = ?", [u, u, p]);
   
   if (!match) {
     log.warn('LOGIN_FAILED', { user: u });

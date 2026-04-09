@@ -1938,63 +1938,82 @@
     // -----------------------------------------
   </script>
 
-  <!-- MODAL PLANES / TIENDA TOKENS -->
+  <!-- MODAL PREMIUM HÍBRIDO (SUSCRIPCIONES + TOKENS) -->
   <div id="modalPremium" class="modal-overlay">
-    <div class="modal-content" style="max-width: 800px; border-color: rgba(99,102,241,0.3); box-shadow: 0 20px 60px rgba(99,102,241,0.1); position: relative; overflow: hidden; padding: 35px 25px;">
-      <h2 style="text-align:center; font-size: 26px; margin-bottom: 5px;">Tienda de Tokens</h2>
-      <p style="text-align:center; color:#9ca3af; margin-bottom: 25px; font-size: 14px;">Paga de forma exacta por la inteligencia que consumes. Sin suscripciones forzadas.</p>
+    <div class="modal-content" style="max-width: 900px; border-color: #fbbf24; background: linear-gradient(135deg, #0f0f12 0%, #050505 100%); padding: 0; overflow: hidden; border-radius: 24px;">
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
-        
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; display:flex; flex-direction:column; align-items:center; transition:0.3s; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-          <span style="font-size:11px; text-transform:uppercase; color:#9ca3af; letter-spacing:1px; margin-bottom:5px;">Probar</span>
-          <h3 style="color:#d1d5db; margin:0 0 15px 0; font-size:24px;">20<span style="font-size:12px;">TK</span></h3>
-          <p style="margin:0; font-size:16px; font-weight:bold; color:#fff;">$1.00</p>
-          <p style="margin:5px 0 0 0; font-size:11px; color:#6b7280;">$0.050/tk</p>
-          <button class="btn-glass" onclick="comprarTokens(20, '$1.00')" style="margin-top:15px; width:100%; border-color:rgba(255,255,255,0.1); font-size:12px;">Elegir</button>
-        </div>
-
-        <div style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.4); border-radius: 12px; padding: 15px; display:flex; flex-direction:column; align-items:center; transition:0.3s; cursor:pointer; position:relative; box-shadow: 0 0 20px rgba(99,102,241,0.2);" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
-          <div style="position:absolute; top:-12px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:4px 10px; border-radius:20px; white-space:nowrap;">🔥 MÁS POPULAR</div>
-          <span style="font-size:11px; text-transform:uppercase; color:#a5b4fc; letter-spacing:1px; margin-bottom:5px; font-weight:bold;">+5 GRATIS</span>
-          <h3 style="color:#818cf8; margin:0 0 15px 0; font-size:28px;">55<span style="font-size:12px;">TK</span></h3>
-          <p style="margin:0; font-size:18px; font-weight:800; color:#fff;">$2.00</p>
-          <p style="margin:5px 0 0 0; font-size:11px; color:#a5b4fc;">$0.036/tk</p>
-          <button class="btn-glass" onclick="comprarTokens(55, '$2.00')" style="margin-top:15px; width:100%; background:#6366f1; border:none; color:white; font-size:12px; font-weight:bold;">Elegir</button>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; display:flex; flex-direction:column; align-items:center; transition:0.3s; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-          <span style="font-size:11px; text-transform:uppercase; color:#10b981; letter-spacing:1px; margin-bottom:5px; font-weight:bold;">+20 GRATIS</span>
-          <h3 style="color:#10b981; margin:0 0 15px 0; font-size:24px;">140<span style="font-size:12px;">TK</span></h3>
-          <p style="margin:0; font-size:16px; font-weight:bold; color:#fff;">$4.00</p>
-          <p style="margin:5px 0 0 0; font-size:11px; color:#6b7280;">$0.028/tk</p>
-          <button class="btn-glass" onclick="comprarTokens(140, '$4.00')" style="margin-top:15px; width:100%; border-color:rgba(255,255,255,0.1); font-size:12px;">Elegir</button>
-        </div>
-        
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; display:flex; flex-direction:column; align-items:center; transition:0.3s; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-          <span style="font-size:11px; text-transform:uppercase; color:#eab308; letter-spacing:1px; margin-bottom:5px; font-weight:bold;">+80 GRATIS</span>
-          <h3 style="color:#eab308; margin:0 0 15px 0; font-size:24px;">380<span style="font-size:12px;">TK</span></h3>
-          <p style="margin:0; font-size:16px; font-weight:bold; color:#fff;">$8.00</p>
-          <p style="margin:5px 0 0 0; font-size:11px; color:#6b7280;">$0.021/tk</p>
-          <button class="btn-glass" onclick="comprarTokens(380, '$8.00')" style="margin-top:15px; width:100%; border-color:rgba(255,255,255,0.1); font-size:12px;">Elegir</button>
-        </div>
-
-        <div style="background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.4); border-radius: 12px; padding: 15px; display:flex; flex-direction:column; align-items:center; transition:0.3s; cursor:pointer; position:relative;" onmouseover="this.style.background='rgba(251,191,36,0.1)'" onmouseout="this.style.background='rgba(251,191,36,0.05)'">
-          <div style="position:absolute; top:-10px; background:#fbbf24; color:#000; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:20px; white-space:nowrap;">🔥 MÁXIMO AHORRO</div>
-          <span style="font-size:11px; text-transform:uppercase; color:#fbbf24; letter-spacing:1px; margin-bottom:5px; font-weight:bold;">+200 GRATIS</span>
-          <h3 style="color:#fbbf24; margin:0 0 15px 0; font-size:26px;">1000<span style="font-size:12px;">TK</span></h3>
-          <p style="margin:0; font-size:16px; font-weight:bold; color:#fff;">$15.00</p>
-          <p style="margin:5px 0 0 0; font-size:11px; color:#fef3c7;">$0.015/tk</p>
-          <button class="btn-glass btn-ultra" onclick="comprarTokens(1000, '$15.00')" style="margin-top:15px; width:100%; font-size:12px; padding: 8px;">Mejor Trato</button>
-        </div>
+      <!-- Banner Superior -->
+      <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); padding: 20px; text-align: center; color: #000;">
+        <h2 style="margin:0; font-weight: 900; font-size: 24px; letter-spacing: -0.5px;">⭐ DESBLOQUEA TODO EL PODER</h2>
+        <p style="margin:5px 0 0 0; font-size: 13px; font-weight: 600; opacity: 0.8;">Voz Mágica, Agentes PRO y Consultas Ilimitadas</p>
       </div>
-      
-      <div style="margin-top:25px; font-size:12px; color:#9ca3af; text-align:center; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
-         <strong>Costo de Operaciones:</strong> Mensaje Simple = 1 Token | Analizar Archivos y Códigos Largos = 3 Tokens | Agentes PRO = 5 Tokens.
-         <br><br><span style="text-decoration:underline; cursor:pointer;" onclick="cerrarModal('modalPremium')">Volver</span>
+
+      <div style="padding: 30px; display: flex; flex-direction: column; gap: 30px;">
+        
+        <!-- Bloque 1: Suscripciones -->
+        <div>
+          <h3 style="color: #fbbf24; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; text-align: center;">Planes Mensuales (Suscripción)</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            
+            <!-- Plan PLUS -->
+            <div class="card-plan" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; padding: 25px; display: flex; flex-direction: column; gap: 15px; position: relative;">
+               <div style="display: flex; justify-content: space-between; align-items: center;">
+                 <h4 style="font-size: 20px; font-weight: 800; color: #fff;">DEBUG <span style="color:#6366f1;">PLUS</span></h4>
+                 <div style="font-size: 24px; font-weight: 900;">$7.99<span style="font-size: 12px; color: var(--text-muted); font-weight: 400;">/mes</span></div>
+               </div>
+               <ul style="list-style: none; padding: 0; font-size: 13px; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;">
+                 <li>✅ <strong>80 Mensajes</strong> Diarios</li>
+                 <li>✅ <strong>Voz Mágica</strong> Activada</li>
+                 <li>✅ Modelos <strong>Claude 3.5</strong></li>
+                 <li>✅ Acceso a Agentes Básicos</li>
+               </ul>
+               <button class="btn-glass" onclick="comprarPRO()" style="background: #6366f1; color: #fff; border: none; font-weight: 800; padding: 12px; border-radius: 12px; margin-top: 10px;">ELEGIR PLUS</button>
+            </div>
+
+            <!-- Plan PRO -->
+            <div class="card-plan" style="background: rgba(251,191,36,0.05); border: 2px solid #fbbf24; border-radius: 20px; padding: 25px; display: flex; flex-direction: column; gap: 15px; position: relative; box-shadow: 0 0 30px rgba(251,191,36,0.1);">
+               <div style="position: absolute; top: -12px; right: 20px; background: #fbbf24; color: #000; font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 10px;">RECOMENDADO</div>
+               <div style="display: flex; justify-content: space-between; align-items: center;">
+                 <h4 style="font-size: 20px; font-weight: 800; color: #fbbf24;">DEBUG PRO</h4>
+                 <div style="font-size: 24px; font-weight: 900;">$14.99<span style="font-size: 12px; color: var(--text-muted); font-weight: 400;">/mes</span></div>
+               </div>
+               <ul style="list-style: none; padding: 0; font-size: 13px; color: var(--text-muted); display: flex; flex-direction: column; gap: 8px;">
+                 <li>✅ <strong>200 Mensajes</strong> Diarios</li>
+                 <li>✅ <strong>Voz Mágica</strong> & Visión</li>
+                 <li>✅ <strong>Agentes de Elite</strong> (Analistas)</li>
+                 <li>✅ Prioridad Máxima en Repuestas</li>
+               </ul>
+               <button class="btn-glass glow-gold" onclick="comprarPRO()" style="background: #fbbf24; color: #000; border: none; font-weight: 900; padding: 12px; border-radius: 12px; margin-top: 10px;">SER PRO SUPREMO</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Bloque 2: Tienda de Tokens -->
+        <div style="border-top: 1px solid var(--border); padding-top: 30px;">
+          <h3 style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; text-align: center;">O paga solo por lo que usas (Carga de Tokens)</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+            <div class="token-mini" onclick="comprarTokens(55, '$2.00')">55 <span>TK</span> <div class="price">$2</div></div>
+            <div class="token-mini" onclick="comprarTokens(140, '$4.00')">140 <span>TK</span> <div class="price">$4</div></div>
+            <div class="token-mini" onclick="comprarTokens(380, '$8.00')">380 <span>TK</span> <div class="price">$8</div></div>
+            <div class="token-mini highlighted" onclick="comprarTokens(1000, '$15.00')">1000 <span>TK</span> <div class="price">$15</div></div>
+          </div>
+        </div>
+
+        <div style="text-align: center;">
+          <button class="btn-glass" onclick="cerrarModal('modalPremium')" style="opacity: 0.5; font-size: 12px; border: none;">Volver al chat</button>
+        </div>
       </div>
     </div>
-  </div>
+  </div> 
+  <style>
+    .token-mini { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 15px 10px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; font-weight: 800; color: #fff; font-size: 18px; }
+    .token-mini span { font-size: 10px; color: var(--text-muted); }
+    .token-mini .price { font-size: 14px; color: #10b981; margin-top: 5px; }
+    .token-mini:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
+    .token-mini.highlighted { border-color: #fbbf24; background: rgba(251,191,36,0.05); }
+    .card-plan:hover { border-color: rgba(255,255,255,0.1); }
+  </style>
 
   <!-- MODAL METODO DE PAGO -->
   <div id="modalMetodoPago" class="modal-overlay" style="z-index: 20000;">
@@ -2515,7 +2534,13 @@
       const res = await fetch(API + "/register", { credentials: "include",  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
       const data = await res.json();
       if (!data.ok) return showAlert(data.msg);
-      showAlert(data.msg || "¡Registrado con éxito! Ahora inicia sesión.", "success");
+      
+      // [FIX] Limpiamos y preparamos el login automáticamente
+      document.getElementById("user").value = user;
+      document.getElementById("pass").value = "";
+      document.getElementById("pass").focus();
+      
+      showAlert(`${data.msg || "¡Registrado con éxito!"} <br><button onclick="login()" style="background:#fbbf24; color:#000; border:none; padding:8px 15px; border-radius:8px; margin-top:10px; font-weight:bold; cursor:pointer; pointer-events:auto;">🔑 INGRESAR AHORA</button>`, "success");
     }
 
     function logout() {
