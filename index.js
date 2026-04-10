@@ -64,35 +64,44 @@ function validate(schema) {
 // ============================================================
 // [ABUSE] LIMITADOR POR USUARIO + CÁLCULO DE PLANES
 // ============================================================
-const userDailyUsage = new Map();
+// [ABUSE] LIMITADOR POR USUARIO — Persistencia en DB (Phase 4)
 function userRateLimiter() {
   return async (req, res, next) => {
     if (!req.user) return next();
     
-    // Calcular límite dinámicamente: FREE (20) vs PRO/Admin (200) vs PLUS (80)
-    let maxPerDay = 20; // Default FREE
     try {
-      const u = await db.get("SELECT premium, is_admin FROM users WHERE username = ?", [req.user]);
-      if (u) {
-         if (u.premium === 2) maxPerDay = 80; // PLUS
-         else if (u.premium === 1 || u.premium > Date.now() || u.is_admin === 1) maxPerDay = 200; // PRO
-      }
-    } catch(e) {}
+      const u = await db.get("SELECT premium, is_admin, usage_today, last_usage_reset FROM users WHERE username = ?", [req.user]);
+      if (!u) return next();
 
-    const today = new Date().toISOString().split('T')[0];
-    const key = `${req.user}::${today}`;
-    const current = userDailyUsage.get(key) || 0;
-    
-    if (current >= maxPerDay) {
-      log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user, planLimit: maxPerDay });
-      return res.status(200).json({ ok: false, upgradeRequired: true, msg: `Has alcanzado tu límite diario. Mejora a PLUS o PRO para continuar.` });
+      // Reset diario automático por usuario
+      const today = new Date().toISOString().split('T')[0];
+      const lastReset = u.last_usage_reset ? u.last_usage_reset.split('T')[0] : '';
+      
+      let currentUsage = u.usage_today || 0;
+      if (today !== lastReset) {
+        currentUsage = 0;
+        await db.run("UPDATE users SET usage_today = 0, last_usage_reset = CURRENT_TIMESTAMP WHERE username = ?", [req.user]);
+      }
+
+      // Calcular límite: FREE (30) vs PRO (200) vs PLUS (80)
+      let maxPerDay = 30; 
+      if (u.is_admin === 1 || u.premium === 1 || (u.premium > Date.now())) maxPerDay = 200;
+      else if (u.premium === 2) maxPerDay = 80;
+
+      if (currentUsage >= maxPerDay) {
+        log.warn('USER_DAILY_LIMIT_EXCEEDED', { user: req.user, planLimit: maxPerDay });
+        return res.status(200).json({ ok: false, upgradeRequired: true, msg: `Has alcanzado tu límite de ${maxPerDay} mensajes diarios.` });
+      }
+
+      // Incrementar uso
+      await db.run("UPDATE users SET usage_today = usage_today + 1 WHERE username = ?", [req.user]);
+      next();
+    } catch(e) {
+      log.error('LIMITER_ERROR', { error: e.message });
+      next();
     }
-    userDailyUsage.set(key, current + 1);
-    next();
   };
 }
-// Limpiar mapa de uso cada 24h para evitar fuga de memoria
-setInterval(() => userDailyUsage.clear(), 24 * 60 * 60 * 1000);
 
 
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
@@ -101,9 +110,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 const app = express();
 
-// ============================================================
-// [SEC-1] HEADERS DE SEGURIDAD — Helmet con CSP, HSTS, frameguard
-// ============================================================
+// [SEC-1] HEADERS DE SEGURIDAD — Helmet restringido (Cero '*')
+const IS_PROD = process.env.RENDER || process.env.NODE_ENV === 'production';
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -111,20 +120,40 @@ app.use(helmet({
       "script-src": [
         "'self'", 
         "'unsafe-inline'", 
-        "'unsafe-eval'", 
-        "https:", // [FIX CRÍTICO] Permitir CDNs para unblock marcado, chartjs, pyodide
+        "'unsafe-eval'", // Requerido por Pyodide (WASM)
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
         "https://www.paypal.com", 
         "https://sdk.mercadopago.com"
       ],
       "script-src-attr": ["'unsafe-inline'"],
-      "style-src": ["'self'", "'unsafe-inline'", "https:", "https://fonts.googleapis.com"],
-      "font-src": ["'self'", "data:", "https:", "https://fonts.gstatic.com"],
-      "img-src": ["'self'", "data:", "https:"],
-      "connect-src": ["'self'", "https:", "wss:"], // [FIX] Necesario para scripts externos y APIs
-      "frame-src": ["'self'", "https://www.paypal.com", "https://sdk.mercadopago.com"],
+      "style-src": [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://fonts.googleapis.com", 
+        "https://cdnjs.cloudflare.com"
+      ],
+      "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
+      "img-src": ["'self'", "data:", "https://*", "https://w.wallhaven.cc"], // Permitir avatares y fondos externos
+      "connect-src": [
+        "'self'", 
+        "https://api.openai.com", 
+        "https://openrouter.ai",
+        "https://api.groq.com",
+        "https://sdk.mercadopago.com",
+        "https://www.paypal.com",
+        "wss:"
+      ],
+      "frame-src": [
+        "'self'", 
+        "https://www.paypal.com", 
+        "https://sdk.mercadopago.com"
+      ],
+      "object-src": ["'none'"],
+      "upgrade-insecure-requests": []
     }
   },
-  hsts: { maxAge: 31536000, includeSubDomains: true },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
   frameguard: { action: 'deny' },
   noSniff: true,
   xssFilter: true,
@@ -132,21 +161,22 @@ app.use(helmet({
 
 app.set('trust proxy', 1);
 
-// ============================================================
-// [SEC-2] CORS RESTRICTIVO — solo origen permitido
-// ============================================================
+// [SEC-2] CORS RESTRICTIVO — solo origen permitido (con regex de render)
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'https://debugai-sgew.onrender.com';
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requests sin origen (ej. Postman en dev, webhooks de MP/PayPal)
     if (!origin) return callback(null, true);
-    if (origin === ALLOWED_ORIGIN || origin === 'http://localhost:3000') {
+    // Permitir el origen oficial y cualquier subdominio en localhost durante dev
+    const isLocal = origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000';
+    if (origin === ALLOWED_ORIGIN || isLocal) {
       return callback(null, true);
     }
+    log.warn('CORS_BLOCKED', { origin });
     return callback(new Error('CORS: Origen no autorizado'));
   },
-  credentials: true, // [SEC] Requerido para cookies HTTPOnly
-  optionsSuccessStatus: 200
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(express.json({ limit: '5mb' })); 
@@ -268,6 +298,9 @@ async function initDB() {
   try { await db.exec("ALTER TABLE users ADD COLUMN last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"); } catch(e){}
   try { await db.exec("ALTER TABLE users ADD COLUMN automation_flags TEXT DEFAULT '{}';"); } catch(e){}
   try { await db.exec("ALTER TABLE users ADD COLUMN pending_gift TEXT DEFAULT NULL;"); } catch(e){}
+  try { await db.exec("ALTER TABLE users ADD COLUMN last_platform TEXT DEFAULT 'Desktop';"); } catch(e){}
+  try { await db.exec("ALTER TABLE users ADD COLUMN usage_today INTEGER DEFAULT 0;"); } catch(e){}
+  try { await db.exec("ALTER TABLE users ADD COLUMN last_usage_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"); } catch(e){}
 
   if (fs.existsSync("users.json") && fs.existsSync("chats.json")) {
     console.log("Migrando de JSON a SQLite...");
@@ -377,7 +410,7 @@ async function requireMaster(req, res, next) {
     const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });
     if (!decoded?.user) return res.status(401).json({ ok: false, msg: 'Token inválido' });
     req.user = decoded.user;
-    const user = await db.get('SELECT is_admin FROM users WHERE username = ?', [req.user]);
+    const user = await db.get('SELECT is_admin FROM users WHERE LOWER(username) = LOWER(?)', [req.user]);
     if (!user || user.is_admin !== 1) {
       registrarEvento(req.user, 'SECURITY_ALERT', { msg: 'Intento de acceso admin fraudulento', endpoint: req.originalUrl });
       log.warn('ADMIN_ACCESS_DENIED', { user: req.user, endpoint: req.originalUrl });
@@ -398,15 +431,24 @@ app.post("/api/admin/make-me-admin", adminLimiter, async (req, res) => {
     if (safeSecret && safeSecret.trim() === MASTER_KEY) {
       // 1. Asegurar que el usuario existe o crearlo si es Axel
       let targetUser = xss(user) || "Axel";
-      const exists = await db.get("SELECT * FROM users WHERE username = ?", [targetUser]);
+      const exists = await db.get("SELECT * FROM users WHERE LOWER(username) = LOWER(?)", [targetUser]);
       if (!exists && targetUser === "Axel") {
          await db.run("INSERT INTO users (username, password, is_admin, premium, creditos) VALUES (?, ?, ?, ?, ?)", ["Axel", "Axel1891", 1, 1, 999999]);
       } else {
-         await db.run("UPDATE users SET is_admin = 1, premium = 1 WHERE username = ?", [targetUser]);
+         await db.run("UPDATE users SET is_admin = 1, premium = 1 WHERE LOWER(username) = LOWER(?)", [targetUser]);
       }
       
       // 2. Generar un Token Maestro para esta sesión
       const token = jwt.sign({ user: targetUser }, SECRET, { expiresIn: "7d" });
+      
+      const isProd = process.env.RENDER || process.env.NODE_ENV === 'production';
+      res.cookie('authToken', token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'Lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
       return res.json({ ok: true, msg: "¡Identidad Maestra Verificada!", token });
     }
     res.status(403).json({ ok: false, msg: "Llave incorrecta." });
@@ -416,7 +458,10 @@ app.get("/api/admin/stats", requireMaster, async (req, res) => {
    
    const totalUsers = await db.get("SELECT COUNT(*) as c FROM users");
    const proUsers = await db.get("SELECT COUNT(*) as c FROM users WHERE premium = 1");
-   const usersList = await db.all("SELECT username, premium, is_admin, creditos, created_at FROM users ORDER BY created_at DESC");
+   let usersList = [];
+   try { usersList = await db.all("SELECT username, premium, is_admin, creditos, created_at, last_platform FROM users ORDER BY created_at DESC"); } 
+   catch(e) { usersList = await db.all("SELECT username, premium, is_admin, creditos, created_at FROM users ORDER BY created_at DESC"); }
+   const mobileUsers = usersList.filter(u => u.last_platform === 'Mobile').length;
    
    // [REVENUE TRACKING] Estadísticas financieras reales
    const totalPayments = await db.get("SELECT COUNT(*) as c FROM payments");
@@ -426,7 +471,8 @@ app.get("/api/admin/stats", requireMaster, async (req, res) => {
    res.json({ 
      ok: true, 
      totalUsers: totalUsers.c, 
-     proUsers: proUsers.c, 
+     proUsers: proUsers.c,
+     mobileUsers,
      users: usersList,
      paymentsCount: totalPayments.c,
      revenueUsd: (totalRevenue.total / 100).toFixed(2),
@@ -593,11 +639,11 @@ app.post("/login", authLimiter, validate({
   const u = xss(user.trim());
   const p = pass.trim();
 
-  // [STAGING] Bloqueo de acceso privado
-  const STAGING_MODE = process.env.STAGING_MODE !== 'false';
-  const ALLOWED_USERS = ["axel", "test_user", "AXEL"];
-  if (STAGING_MODE && !ALLOWED_USERS.includes(u) && !ALLOWED_USERS.includes(u.toLowerCase())) {
-     return res.status(403).json({ ok: false, msg: "El sistema está en Modo Staging Privado. Acceso denegado." });
+  // [STAGING] Bloqueo de acceso privado (Opcional, desactivado por defecto)
+  const STAGING_MODE = process.env.STAGING_MODE === 'true';
+  const ALLOWED_USERS = ["axel", "test_user"];
+  if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
+     return res.status(403).json({ ok: false, msg: "El sistema está en mantenimiento privado." });
   }
 
   log.info('LOGIN_ATTEMPT', { user: u });
@@ -610,20 +656,25 @@ app.post("/login", authLimiter, validate({
     return res.json({ ok: false, msg: 'Credenciales incorrectas' });
   }
   log.info('LOGIN_SUCCESS', { user: match.username });
-  await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE username = ?", [match.username]);
+  
+  const ua = req.headers['user-agent'] || '';
+  const isMobile = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua);
+  const platform = isMobile ? 'Mobile' : 'Desktop';
+  
+  await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_platform = ? WHERE username = ?", [platform, match.username]);
   
   const token = jwt.sign({ user: match.username }, SECRET, { expiresIn: "7d" });
   
   // [SAAS] Seteo de Cookie Segura HTTPOnly
-  const isProd = process.env.RENDER || process.env.NODE_ENV === 'production';
+  const IS_PROD = process.env.RENDER || process.env.NODE_ENV === 'production';
   res.cookie('authToken', token, {
     httpOnly: true,
-    secure: isProd, // True en la nube (HTTPS)
-    sameSite: 'Lax', // [FIX MOBILE] Lax permite que PWA y Mobile guarden la sesión correctamente
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+    secure: IS_PROD, 
+    sameSite: IS_PROD ? 'Strict' : 'Lax', 
+    maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
-  res.json({ ok: true, token });
+  res.json({ ok: true }); // No enviar el token en el body en producción si usamos cookies exclusivas
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -659,17 +710,21 @@ app.post("/register", authLimiter, validate({
   const u = xss(user.trim());
   const p = pass.trim();
 
-  // [STAGING] Bloqueo de registro público
-  const STAGING_MODE = process.env.STAGING_MODE !== 'false';
+  // [STAGING] Bloqueo de registro público (Opcional, desactivado por defecto)
+  const STAGING_MODE = process.env.STAGING_MODE === 'true';
   const ALLOWED_USERS = ["axel", "test_user"];
   if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
-     return res.status(403).json({ ok: false, msg: "Registro público cerrado temporalmente. Fase Pre-Lanzamiento." });
+     return res.status(403).json({ ok: false, msg: "Fase de pruebas privada. Registro cerrado." });
   }
 
   const existing = await db.get("SELECT username FROM users WHERE username = ?", [u]);
   if (existing) return res.json({ ok: false, msg: "Este usuario ya está en nuestra base de datos." });
   
-  await db.run("INSERT INTO users (username, password, creditos, premium, is_admin) VALUES (?, ?, 30, 0, 0)", [u, p]);
+  const ua = req.headers['user-agent'] || '';
+  const isMobile = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua);
+  const platform = isMobile ? 'Mobile' : 'Desktop';
+  
+  await db.run("INSERT INTO users (username, password, creditos, premium, is_admin, last_platform) VALUES (?, ?, 30, 0, 0, ?)", [u, p, platform]);
   
   // [SAAS] Auto-login tras registro con Cookie Segura
   const token = jwt.sign({ user: u }, SECRET, { expiresIn: "7d" });
