@@ -38,6 +38,8 @@ router.post("/api/metrics/update", (req, res) => {
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// NOTE: Document parsing is temporarily isolated to ensure server stability.
+// It will be re-enabled once a safe, Vercel-compatible library is integrated.
 router.post("/upload-document", auth, upload.single("document"), async (req, res) => {
   if (!req.file) return res.json({ ok: false, msg: "No se subió archivo" });
   try {
@@ -45,14 +47,11 @@ router.post("/upload-document", auth, upload.single("document"), async (req, res
     let textExtracted = "";
 
     if (ext === "pdf") {
-      // Dynamic import inside handler to avoid Top-Level Await
-      const pdfParse = (await import('pdf-parse')).default;
-      const data = await pdfParse(req.file.buffer);
-      textExtracted = data.text;
+      // Temporarily disabled to prevent ReferenceError: DOMMatrix in Vercel
+      textExtracted = "[Módulo PDF temporalmente en mantenimiento para optimización]";
     } else if (ext === "docx") {
-      const mammoth = await import('mammoth');
-      const data = await mammoth.extractRawText({ buffer: req.file.buffer });
-      textExtracted = data.value;
+      // Temporarily disabled to prevent boot issues
+      textExtracted = "[Módulo Word temporalmente en mantenimiento]";
     } else {
       textExtracted = req.file.buffer.toString("utf8");
     }
