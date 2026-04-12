@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "node src/server.js",
-    "build": "cd landing_v2 && npm install && npm run build && cd ../app_v2 && npm install && npm run build",
+    "build": "echo 'Building Backend Only...'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
