@@ -122,6 +122,8 @@ export async function stripeWebhook(req, res) {
   } catch (err) {
     res.status(500).json({ received: true, error: err.message });
   }
+}
+
 export async function createPortalSession(req, res) {
   if (!stripe) return res.status(503).json({ ok: false });
   try {
