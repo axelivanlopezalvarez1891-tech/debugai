@@ -4,16 +4,12 @@ import chatRoutes from "./chat.routes.js";
 import adminRoutes from "./admin.routes.js";
 import paymentRoutes from "./payment.routes.js";
 import aiRoutes from "./ai.routes.js";
+import stripeRoutes from "./stripe.routes.js";
 
 import multer from "multer";
-// Note: pdf-parse and mammoth are imported dynamically to ensure ESM compatibility on Vercel
-const pdfParse = (await import('pdf-parse')).default;
-import mammoth from "mammoth";
 import { auth } from "../middlewares/auth.js";
 import { log } from "../utils/logger.js";
 import { getDB } from "../config/db.js";
-
-import stripeRoutes from "./stripe.routes.js";
 
 const router = Router();
 
@@ -35,7 +31,8 @@ router.get("/api/config", (req, res) => {
 
 router.post("/api/metrics/update", (req, res) => {
   const isAuth = req.cookies?.authToken || req.headers?.authorization;
-  const data = req.body || {}; log.info('PWA_OTA_UPDATED', { userPath: isAuth ? 'AuthUser' : 'Guest', body: data });
+  const data = req.body || {}; 
+  log.info('PWA_OTA_UPDATED', { userPath: isAuth ? 'AuthUser' : 'Guest', body: data });
   res.json({ ok: true });
 });
 
@@ -44,12 +41,16 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.post("/upload-document", auth, upload.single("document"), async (req, res) => {
   if (!req.file) return res.json({ ok: false, msg: "No se subió archivo" });
   try {
-    let textExtracted = "";
     const ext = req.file.originalname.split('.').pop().toLowerCase();
+    let textExtracted = "";
+
     if (ext === "pdf") {
+      // Dynamic import inside handler to avoid Top-Level Await
+      const pdfParse = (await import('pdf-parse')).default;
       const data = await pdfParse(req.file.buffer);
       textExtracted = data.text;
     } else if (ext === "docx") {
+      const mammoth = await import('mammoth');
       const data = await mammoth.extractRawText({ buffer: req.file.buffer });
       textExtracted = data.value;
     } else {
@@ -57,6 +58,7 @@ router.post("/upload-document", auth, upload.single("document"), async (req, res
     }
     res.json({ ok: true, text: textExtracted });
   } catch (err) {
+    log.error('UPLOAD_ERROR', { error: err.message });
     res.json({ ok: false, msg: "Error al interpretar archivo" });
   }
 });
