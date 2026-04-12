@@ -1,8 +1,8 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/app/(.*)", "destination": "/api/index.js" },
-    { "source": "/(.*)", "destination": "/api/index.js" }
+    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
+    { "source": "/app/(.*)", "destination": "/api/index.mjs" },
+    { "source": "/(.*)", "destination": "/api/index.mjs" }
   ]
 }
