@@ -5,8 +5,6 @@ import { fileURLToPath } from 'url';
 import { log } from "./utils/logger.js";
 import { configureHelmet, configureCors, rateLimiters } from "./config/security.js";
 import routes from "./routes/index.js";
-import stripeRoutes from "./routes/stripe.routes.js";
-import { stripeWebhook } from "./controllers/stripe.controller.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,12 +17,7 @@ app.use(configureHelmet());
 app.use(configureCors());
 app.use(rateLimiters.global);
 
-// ⚠️ STRIPE WEBHOOK — Must be BEFORE express.json()
-app.post(
-  '/api/webhook/stripe',
-  express.raw({ type: 'application/json' }),
-  stripeWebhook
-);
+// Note: Stripe Webhook raw middleware is now handled inside stripe.routes.js
 
 app.use(express.json({ limit: '5mb' })); 
 app.use(cookieParser());
@@ -42,9 +35,13 @@ app.get("/app/*", (req, res) => {
   res.sendFile(path.join(appDist, "index.html"));
 });
 
+// Diagnostic Health Check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 // Mount modularized API routes
 app.use(routes);
-app.use(stripeRoutes);
 
 // Fallback to landing for everything else
 app.get("*", (req, res) => {

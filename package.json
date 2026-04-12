@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "build:all": "cd landing_v2 && npm install && npm run build && cd ../app_v2 && npm install && npm run build",
+    "build": "cd landing_v2 && npm install && npm run build && cd ../app_v2 && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
