@@ -6,9 +6,8 @@ import paymentRoutes from "./payment.routes.js";
 import aiRoutes from "./ai.routes.js";
 
 import multer from "multer";
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+// Note: pdf-parse and mammoth are imported dynamically to ensure ESM compatibility on Vercel
+const pdfParse = (await import('pdf-parse')).default;
 import mammoth from "mammoth";
 import { auth } from "../middlewares/auth.js";
 import { log } from "../utils/logger.js";
