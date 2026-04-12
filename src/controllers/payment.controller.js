@@ -1,4 +1,5 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { supabase } from "../config/supabase.js";
 import { getDB } from "../config/db.js";
 import { log } from "../utils/logger.js";
 
@@ -75,42 +76,31 @@ export async function mpWebhook(req, res) {
     const topic = req.body?.type || req.query.topic || req.query.type;
 
     if ((topic === 'payment' || topic === 'mp-payment') && paymentId) {
-      const existing = await db.get("SELECT payment_id FROM payments WHERE payment_id = ?", [String(paymentId)]);
-      if (existing) return res.status(200).send("OK");
+      const exists = await db.payments.exists(`mp_${paymentId}`);
+      if (exists) return res.status(200).send("OK");
 
       const mpPayment = new Payment(mpClient);
       const pData = await mpPayment.get({ id: paymentId });
 
       if (pData.status === 'approved') {
-        const username = pData.external_reference;
+        const userId = pData.external_reference; // This should be the UUID from req.user set in preference
         const itemId = pData.additional_info?.items?.[0]?.id || "";
         const title = pData.additional_info?.items?.[0]?.title || "";
         const amountCents = Math.round((pData.transaction_amount || 0) * 100);
 
-        if (username) {
+        if (userId) {
           if (itemId === "pro_subscription") {
-            await db.run("BEGIN");
-            try {
-              await db.run("INSERT INTO payments (payment_id, provider, username, type, amount_cents) VALUES (?, ?, ?, ?, ?)", [String(paymentId), 'mercadopago', username, 'pro', amountCents]);
-              await db.run("UPDATE users SET premium = 1 WHERE username = ?", [username]);
-              await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [username, 'COMPRA', JSON.stringify({ provider: 'mercadopago', tipo: 'pro', monto_cents: amountCents, payment_id: paymentId })]);
-              await db.run("COMMIT");
-            } catch (txErr) {
-              await db.run("ROLLBACK");
-            }
+            await db.payments.register({ paymentId: `mp_${paymentId}`, provider: 'mercadopago', userId, type: 'pro', amountCents });
+            await db.profiles.update(userId, { plan: 'pro' });
+            await db.events.track(userId, 'COMPRA', { provider: 'mercadopago', tipo: 'pro', monto_cents: amountCents, payment_id: paymentId });
           } else {
             const qtyMatch = title.match(/(\d+) Tokens/);
             const qty = qtyMatch ? parseInt(qtyMatch[1]) : 0;
             if (qty > 0) {
-              await db.run("BEGIN");
-              try {
-                await db.run("INSERT INTO payments (payment_id, provider, username, type, amount_cents, tokens_granted) VALUES (?, ?, ?, ?, ?, ?)", [String(paymentId), 'mercadopago', username, 'tokens', amountCents, qty]);
-                await db.run("UPDATE users SET creditos = creditos + ? WHERE username = ?", [qty, username]);
-                await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [username, 'COMPRA', JSON.stringify({ provider: 'mercadopago', tipo: 'tokens', cantidad: qty, monto_cents: amountCents, payment_id: paymentId })]);
-                await db.run("COMMIT");
-              } catch (txErr) {
-                await db.run("ROLLBACK");
-              }
+              await db.payments.register({ paymentId: `mp_${paymentId}`, provider: 'mercadopago', userId, type: 'tokens', amountCents, tokensGranted: qty });
+              const profile = await db.profiles.get(userId);
+              await db.profiles.update(userId, { creditos: (profile?.creditos || 0) + qty });
+              await db.events.track(userId, 'COMPRA', { provider: 'mercadopago', tipo: 'tokens', cantidad: qty, monto_cents: amountCents, payment_id: paymentId });
             }
           }
         }
@@ -118,6 +108,7 @@ export async function mpWebhook(req, res) {
     }
     res.status(200).send("OK");
   } catch (error) {
+    log.error('MP_WEBHOOK_ERROR', { error: error.message });
     res.status(500).json({ ok: false });
   }
 }
@@ -165,8 +156,8 @@ export async function capturePaypalOrder(req, res) {
     const { orderID } = req.body;
     if (!orderID || typeof orderID !== 'string') return res.status(400).json({ ok: false, msg: "Order ID inválido." });
 
-    const existing = await db.get("SELECT payment_id FROM payments WHERE payment_id = ?", [`paypal_${orderID}`]);
-    if (existing) return res.json({ ok: true });
+    const exists = await db.payments.exists(`paypal_${orderID}`);
+    if (exists) return res.json({ ok: true });
 
     const accessToken = await getPayPalAccessToken();
     const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderID}/capture`, {
@@ -178,32 +169,25 @@ export async function capturePaypalOrder(req, res) {
        const capturedAmount = orderData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || "0";
        const amountCents = Math.round(parseFloat(capturedAmount) * 100);
 
-       await db.run("BEGIN");
-       try {
-         if (capturedAmount === PRO_PRICE) {
-           await db.run("INSERT INTO payments (payment_id, provider, username, type, amount_cents) VALUES (?, ?, ?, ?, ?)", [`paypal_${orderID}`, 'paypal', req.user, 'pro', amountCents]);
-           await db.run("UPDATE users SET premium = 1 WHERE username = ?", [req.user]);
-           await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [req.user, 'COMPRA', JSON.stringify({ provider: 'paypal', tipo: 'pro', monto_cents: amountCents, order_id: orderID })]);
-           await db.run("COMMIT");
-         } else if (PRICE_TO_TOKENS[capturedAmount]) {
-           const tokensToGrant = PRICE_TO_TOKENS[capturedAmount];
-           await db.run("INSERT INTO payments (payment_id, provider, username, type, amount_cents, tokens_granted) VALUES (?, ?, ?, ?, ?, ?)", [`paypal_${orderID}`, 'paypal', req.user, 'tokens', amountCents, tokensToGrant]);
-           await db.run("UPDATE users SET creditos = creditos + ? WHERE username = ?", [tokensToGrant, req.user]);
-           await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [req.user, 'COMPRA', JSON.stringify({ provider: 'paypal', tipo: 'tokens', cantidad: tokensToGrant, monto_cents: amountCents, order_id: orderID })]);
-           await db.run("COMMIT");
-         } else {
-           await db.run("ROLLBACK");
-           return res.json({ ok: false, msg: "Monto no reconocido." });
-         }
-       } catch (txErr) {
-         await db.run("ROLLBACK");
-         return res.json({ ok: false, msg: "Error procesando transacción." });
+       if (capturedAmount === PRO_PRICE) {
+         await db.payments.register({ paymentId: `paypal_${orderID}`, provider: 'paypal', userId: req.user, type: 'pro', amountCents });
+         await db.profiles.update(req.user, { plan: 'pro' });
+         await db.events.track(req.user, 'COMPRA', { provider: 'paypal', tipo: 'pro', monto_cents: amountCents, order_id: orderID });
+       } else if (PRICE_TO_TOKENS[capturedAmount]) {
+         const tokensToGrant = PRICE_TO_TOKENS[capturedAmount];
+         await db.payments.register({ paymentId: `paypal_${orderID}`, provider: 'paypal', userId: req.user, type: 'tokens', amountCents, tokensGranted: tokensToGrant });
+         const profile = await db.profiles.get(req.user);
+         await db.profiles.update(req.user, { creditos: (profile?.creditos || 0) + tokensToGrant });
+         await db.events.track(req.user, 'COMPRA', { provider: 'paypal', tipo: 'tokens', cantidad: tokensToGrant, monto_cents: amountCents, order_id: orderID });
+       } else {
+         return res.json({ ok: false, msg: "Monto no reconocido." });
        }
        res.json({ ok: true });
     } else {
        res.json({ ok: false });
     }
   } catch (err) {
+    log.error('PAYPAL_CAPTURE_ERROR', { error: err.message });
     res.json({ ok: false });
   }
 }

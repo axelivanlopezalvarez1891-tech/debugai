@@ -68,7 +68,7 @@ router.post("/api/eventos/track", auth, async (req, res) => {
   if (!tipo || !TIPOS_PERMITIDOS.includes(tipo)) return res.status(400).json({ ok: false });
   try {
     const db = getDB();
-    await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [req.user, tipo, JSON.stringify(metadata || {})]);
+    await db.events.track(req.user, tipo, metadata);
   } catch (e) {}
   res.json({ ok: true });
 });
