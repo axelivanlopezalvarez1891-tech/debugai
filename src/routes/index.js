@@ -14,6 +14,8 @@ import { auth } from "../middlewares/auth.js";
 import { log } from "../utils/logger.js";
 import { getDB } from "../config/db.js";
 
+import stripeRoutes from "./stripe.routes.js";
+
 const router = Router();
 
 // Montaje de sub-rutas
@@ -21,6 +23,7 @@ router.use(authRoutes);
 router.use(chatRoutes);
 router.use(adminRoutes);
 router.use(paymentRoutes);
+router.use(stripeRoutes);
 router.use("/api/ai", aiRoutes);
 
 // Utilidades extras de /api

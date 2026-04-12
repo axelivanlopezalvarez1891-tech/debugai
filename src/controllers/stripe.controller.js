@@ -122,4 +122,39 @@ export async function stripeWebhook(req, res) {
   } catch (err) {
     res.status(500).json({ received: true, error: err.message });
   }
+export async function createPortalSession(req, res) {
+  if (!stripe) return res.status(503).json({ ok: false });
+  try {
+    const db = getDB();
+    const profile = await db.profiles.get(req.user);
+    if (!profile?.stripe_customer_id) return res.status(400).json({ ok: false, msg: "No tienes una suscripción activa." });
+
+    const origin = req.headers.origin || process.env.APP_URL || 'http://localhost:3000';
+    const session = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${origin}/app`,
+    });
+    res.json({ ok: true, url: session.url });
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+}
+
+export async function syncSubscription(req, res) {
+  if (!stripe) return res.status(503).json({ ok: false });
+  try {
+    const db = getDB();
+    const profile = await db.profiles.get(req.user);
+    if (!profile?.stripe_subscription_id) return res.json({ ok: false, msg: "No se encontró suscripción." });
+
+    const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+    await syncSubscriptionStatus(req.user, sub);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+}
+
+export async function getPlans(req, res) {
+  res.json({ ok: true, plans: Object.values(STRIPE_PLANS) });
 }
