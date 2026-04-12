@@ -1,6 +1,16 @@
 import "./polyfills.mjs";
-import app from "../src/app.js";
+import express from "express";
 
-console.log("🚀 Server booting up...");
+const debugApp = express();
 
-export default app;
+debugApp.all("*", (req, res) => {
+  res.json({ 
+    status: "RADICAL_ISOLATION_ACTIVE", 
+    message: "If you see this, Vercel IS finally updating. The issue is purely inside your src/ folder.",
+    timestamp: new Date().toISOString()
+  });
+});
+
+console.log("DEBUG: Radical isolation mode started.");
+
+export default debugApp;
