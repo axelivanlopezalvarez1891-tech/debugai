@@ -13,18 +13,22 @@ export const configureHelmet = () => helmet({
       "script-src": [
         "'self'", 
         "'unsafe-inline'", 
-        "'unsafe-eval'", // Requerido por Pyodide (WASM)
+        "'unsafe-eval'", 
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com",
         "https://www.paypal.com", 
-        "https://sdk.mercadopago.com"
+        "https://sdk.mercadopago.com",
+        "https://cdn.tailwindcss.com",
+        "https://js.stripe.com",
+        "https://checkout.stripe.com"
       ],
       "script-src-attr": ["'unsafe-inline'"],
       "style-src": [
         "'self'", 
         "'unsafe-inline'", 
         "https://fonts.googleapis.com", 
-        "https://cdnjs.cloudflare.com"
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.tailwindcss.com"
       ],
       "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
       "img-src": ["'self'", "data:", "https://*", "https://w.wallhaven.cc"], 
@@ -35,12 +39,15 @@ export const configureHelmet = () => helmet({
         "https://api.groq.com",
         "https://sdk.mercadopago.com",
         "https://www.paypal.com",
+        "https://checkout.stripe.com",
         "wss:"
       ],
       "frame-src": [
         "'self'", 
         "https://www.paypal.com", 
-        "https://sdk.mercadopago.com"
+        "https://sdk.mercadopago.com",
+        "https://js.stripe.com",
+        "https://checkout.stripe.com"
       ],
       "object-src": ["'none'"],
       "upgrade-insecure-requests": []
@@ -58,7 +65,7 @@ export const configureCors = () => {
   return cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const isLocal = origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000';
+      const isLocal = origin.includes('localhost:') || origin.includes('127.0.0.1:');
       if (origin === ALLOWED_ORIGIN || isLocal) {
         return callback(null, true);
       }

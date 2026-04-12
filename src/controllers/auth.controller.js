@@ -1,189 +1,125 @@
-import jwt from "jsonwebtoken";
-import xss from "xss";
+import { supabase } from "../config/supabase.js";
 import { getDB } from "../config/db.js";
 import { log } from "../utils/logger.js";
-
-const SECRET = process.env.JWT_SECRET || "debugai_ultra_secure_secret_2026";
-const IS_PROD = process.env.RENDER || process.env.NODE_ENV === 'production';
+import xss from "xss";
 
 export async function login(req, res) {
-  const db = getDB();
-  const { user, pass } = req.body;
+  const { user, pass } = req.body; // 'user' is email in Supabase context
   if (!user || !pass) return res.json({ ok: false, msg: "Faltan datos" });
-  
-  const u = xss(user.trim());
-  const p = pass.trim();
 
-  // [STAGING] Bloqueo de acceso privado
-  const STAGING_MODE = process.env.STAGING_MODE === 'true';
-  const ALLOWED_USERS = ["axel", "test_user"];
-  if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
-     return res.status(403).json({ ok: false, msg: "El sistema está en mantenimiento privado." });
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: user.trim(),
+      password: pass.trim(),
+    });
+
+    if (error) {
+      log.warn('LOGIN_FAILED', { user, error: error.message });
+      return res.json({ ok: false, msg: 'Credenciales incorrectas o cuenta no verificada.' });
+    }
+
+    // Supabase handles sessions, but for our backend consistency we might still use cookies
+    // In Vercel, we can pass the Supabase session token
+    res.cookie('sb-access-token', data.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: data.session.expires_in * 1000
+    });
+
+    res.json({ ok: true, session: data.session });
+  } catch (err) {
+    log.error('LOGIN_ERROR', { error: err.message });
+    res.status(500).json({ ok: false, msg: "Error de servidor." });
   }
-
-  log.info('LOGIN_ATTEMPT', { user: u });
-
-  const match = await db.get("SELECT * FROM users WHERE (username = ? OR LOWER(username) = LOWER(?)) AND password = ?", [u, u, p]);
-  if (!match) {
-    log.warn('LOGIN_FAILED', { user: u });
-    return res.json({ ok: false, msg: 'Credenciales incorrectas' });
-  }
-  
-  log.info('LOGIN_SUCCESS', { user: match.username });
-  
-  const ua = req.headers['user-agent'] || '';
-  const isMobile = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua);
-  const platform = isMobile ? 'Mobile' : 'Desktop';
-  
-  await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP, last_platform = ? WHERE username = ?", [platform, match.username]);
-  
-  const token = jwt.sign({ user: match.username }, SECRET, { expiresIn: "7d" });
-  
-  res.cookie('authToken', token, {
-    httpOnly: true,
-    secure: IS_PROD, 
-    sameSite: IS_PROD ? 'Strict' : 'Lax', 
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
-
-  res.json({ ok: true }); 
 }
 
 export async function register(req, res) {
-  const db = getDB();
-  const { user, pass } = req.body;
+  const { user, pass } = req.body; // user is email
   if (!user || !pass) return res.json({ ok: false, msg: "Faltan datos" });
-  
-  const u = xss(user.trim());
-  const p = pass.trim();
 
-  const STAGING_MODE = process.env.STAGING_MODE === 'true';
-  const ALLOWED_USERS = ["axel", "test_user"];
-  if (STAGING_MODE && !ALLOWED_USERS.includes(u.toLowerCase())) {
-     return res.status(403).json({ ok: false, msg: "Fase de pruebas privada. Registro cerrado." });
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: user.trim(),
+      password: pass.trim(),
+      options: {
+        data: {
+          username: user.split('@')[0], // Default username
+        }
+      }
+    });
+
+    if (error) {
+      log.error('REGISTER_FAILED', { user, error: error.message });
+      return res.json({ ok: false, msg: error.message });
+    }
+
+    res.json({ 
+      ok: true, 
+      msg: "¡Cuenta creada! Revisa tu email para confirmar suscripción (si está habilitado) o inicia sesión.",
+      user: data.user 
+    });
+  } catch (err) {
+    log.error('REGISTER_ERROR', { error: err.message });
+    res.status(500).json({ ok: false, msg: "Error al registrar usuario." });
   }
-
-  const existing = await db.get("SELECT username FROM users WHERE username = ?", [u]);
-  if (existing) return res.json({ ok: false, msg: "Este usuario ya está en nuestra base de datos." });
-  
-  const ua = req.headers['user-agent'] || '';
-  const isMobile = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua);
-  const platform = isMobile ? 'Mobile' : 'Desktop';
-  
-  await db.run("INSERT INTO users (username, password, creditos, premium, is_admin, last_platform) VALUES (?, ?, 30, 0, 0, ?)", [u, p, platform]);
-  
-  const token = jwt.sign({ user: u }, SECRET, { expiresIn: "7d" });
-  res.cookie('authToken', token, {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? 'Strict' : 'Lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
-
-  res.json({ ok: true, msg: "🎁 ¡REGALO ACTIVADO!: Has recibido 30 tokens gratis para comenzar. Inicia sesión ahora.", token });
 }
 
-export async function logout(req, res) {
-  res.clearCookie('authToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'Strict' : 'Lax' });
-  res.json({ ok: true, msg: "Desconectado exitosamente" });
+export async function googleLogin(req, res) {
+  try {
+    const origin = req.headers.origin || process.env.APP_URL || 'http://localhost:3000';
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${origin}/auth/callback`,
+      }
+    });
+
+    if (error) throw error;
+    res.json({ ok: true, url: data.url });
+  } catch (err) {
+    res.status(500).json({ ok: false, msg: "Error al iniciar Google OAuth." });
+  }
 }
 
 export async function getPerfil(req, res) {
   const db = getDB();
-  let u = await db.get("SELECT * FROM users WHERE username = ?", [req.user]);
-  if (!u) return res.json({ ok: false });
+  try {
+    // req.user should now be the UUID from Supabase (set by auth middleware)
+    const profile = await db.profiles.get(req.user);
+    
+    if (!profile) {
+      return res.json({ ok: false, msg: "Perfil no encontrado." });
+    }
 
-  // Expiración PRO automágica garantizada
-  if (u.premium > 1 && Date.now() > u.premium) {
-    await db.run("UPDATE users SET premium = 0 WHERE username = ?", [req.user]);
-    // registrar evento
-    try {
-      await db.run("INSERT INTO eventos (username, tipo_evento, metadata) VALUES (?, ?, ?)", [req.user, 'TRIAL_ENDED', '{}']);
-    } catch(e){}
-    u = await db.get("SELECT * FROM users WHERE username = ?", [req.user]);
+    res.json({ 
+      ok: true, 
+      username: profile.username,
+      plan: profile.plan || 'free',
+      premium: profile.plan === 'pro',
+      analyses_count: profile.analyses_count || 0,
+      analyses_limit: profile.analyses_limit || 5,
+      subscribed_at: profile.subscribed_at,
+      subscription_status: profile.subscription_status
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false });
   }
+}
 
-  let flags = {};
-  try { flags = JSON.parse(u.automation_flags || '{}'); } catch(e) {}
-  if (!flags.ab_variant) {
-    flags.ab_variant = Math.random() > 0.5 ? "A" : "B";
-    await db.run("UPDATE users SET automation_flags = ? WHERE username = ?", [JSON.stringify(flags), req.user]);
-  }
-
-  const isActuallyPremium = u.premium === 1 || u.premium > Date.now() || u.is_admin === 1;
-  const isPlus = u.premium === 2;
-  
-  let planDesc = 'FREE';
-  let maxMsgs = 30; // Matches DB rate limiter!
-  if (isPlus) { planDesc = 'PLUS'; maxMsgs = 80; }
-  if (isActuallyPremium) { planDesc = 'PRO'; maxMsgs = 200; }
-  
-  res.json({ 
-    ok: true, 
-    nombre: u.nombre || "", 
-    rol: u.rol || "", 
-    premium: isActuallyPremium, 
-    is_admin: u.is_admin === 1, 
-    creditos: u.creditos, 
-    abVariant: flags.ab_variant, 
-    planDesc, 
-    maxMsgs, 
-    msgsUsadosHoy: u.usage_today || 0,
-    // Stripe subscription info
-    stripe_plan: u.stripe_plan || 'free',
-    stripe_period_end: u.stripe_period_end || null,
-    stripe_subscription_id: u.stripe_subscription_id ? '●●●●' : null, // Nunca exponer ID real
-  });
+export async function logout(req, res) {
+  await supabase.auth.signOut();
+  res.clearCookie('sb-access-token');
+  res.json({ ok: true });
 }
 
 export async function updatePerfil(req, res) {
   const db = getDB();
-  const { nombre, rol } = req.body;
-  await db.run("UPDATE users SET nombre = ?, rol = ? WHERE username = ?", [xss(nombre || ""), xss(rol || ""), req.user]);
-  res.json({ ok: true });
-}
-
-export async function checkGift(req, res) {
-  const db = getDB();
-  const u = await db.get("SELECT pending_gift FROM users WHERE username = ?", [req.user]);
-  if (!u || !u.pending_gift) return res.json({ ok: false });
+  const { username } = req.body;
   try {
-    const gift = JSON.parse(u.pending_gift);
-    res.json({ ok: true, gift });
-  } catch (e) {
+    await db.profiles.update(req.user, { username: xss(username) });
+    res.json({ ok: true });
+  } catch (err) {
     res.json({ ok: false });
   }
-}
-
-export async function claimGift(req, res) {
-  const db = getDB();
-  const u = await db.get("SELECT * FROM users WHERE username = ?", [req.user]);
-  if (!u || !u.pending_gift) return res.json({ ok: false, msg: "No hay regalos pendientes." });
-  
-  try {
-    const gift = JSON.parse(u.pending_gift);
-    if (gift.type === "pro") {
-      const expirationDate = gift.duration ? Date.now() + gift.duration : 1; 
-      await db.run("UPDATE users SET premium = ?, creditos = creditos + 10000, pending_gift = NULL WHERE username = ?", [expirationDate, req.user]);
-    } else if (gift.type === "tokens") {
-      await db.run("UPDATE users SET creditos = creditos + ?, pending_gift = NULL WHERE username = ?", [gift.amount, req.user]);
-    }
-    res.json({ ok: true, msg: "¡Regalo reclamado exitosamente!" });
-  } catch (e) {
-    res.json({ ok: false, msg: "Error al reclamar el regalo." });
-  }
-}
-
-export async function deleteAccount(req, res) {
-  const db = getDB();
-  const { confirmation } = req.body;
-  if (!confirmation || confirmation !== req.user) {
-    return res.json({ ok: false, msg: "El nombre de usuario de confirmación no coincide." });
-  }
-  if (req.user === "Axel") {
-    return res.json({ ok: false, msg: "La cuenta de Administrador Maestro no puede ser eliminada." });
-  }
-  await db.run("DELETE FROM users WHERE username = ?", [req.user]);
-  res.clearCookie('authToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'Strict' : 'Lax' });
-  res.json({ ok: true, msg: "Tu cuenta y todos tus datos han sido eliminados de forma permanente." });
 }

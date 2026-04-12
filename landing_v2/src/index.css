@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark: #030303;
+  --color-dark-soft: #0a0a0c;
+  --color-dark-card: #0d0d10;
+  --color-accent-primary: #fbbf24;
+  --color-accent-secondary: #0ea5e9;
+  --color-neon-purple: #a855f7;
+  
+  --shadow-premium: 0 20px 50px -12px rgba(0, 0, 0, 0.8);
+  --shadow-glow-amber: 0 0 30px -5px rgba(251, 191, 36, 0.2);
+  --shadow-glow-blue: 0 0 30px -5px rgba(14, 165, 233, 0.2);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-[#030303] text-gray-200 antialiased overflow-x-hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-premium {
+    @apply relative px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-300 overflow-hidden active:scale-95;
+  }
+  
+  .btn-premium-primary {
+    @apply bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.1)];
+  }
+  
+  .btn-premium-secondary {
+    @apply bg-white/5 text-white border border-white/10 hover:bg-white/10 backdrop-blur-xl;
+  }
+
+  .glass-card {
+    @apply bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-2xl transition-all duration-500 hover:border-white/15 shadow-premium;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40;
+  }
+  
+  .mesh-gradient {
+    background: radial-gradient(at 0% 0%, rgba(251, 191, 36, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+  }
+}
+
+@layer utilities {
+  .hero-glow {
+    background: radial-gradient(circle at center, rgba(251, 191, 36, 0.08) 0%, transparent 70%);
+  }
+  
+  .grid-pattern {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
+

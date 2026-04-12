@@ -1,33 +1,29 @@
-import jwt from "jsonwebtoken";
+import { supabase } from "../config/supabase.js";
 import { log } from "../utils/logger.js";
 import { getDB } from "../config/db.js";
 
-const SECRET = process.env.JWT_SECRET || "debugai_ultra_secure_secret_2026";
-
-// [SEC-4] MIDDLEWARE DE AUTENTICACIÓN — JWT con hardening completo
-export function auth(req, res, next) {
-  let token = req.cookies?.authToken;
-  if (!token && req.headers.authorization && req.headers.authorization !== 'cookie_mode') {
-    token = req.headers.authorization;
+// [SEC-4] MIDDLEWARE DE AUTENTICACIÓN — Supabase Auth Integration
+export async function auth(req, res, next) {
+  let token = req.cookies?.['sb-access-token'];
+  if (!token && req.headers.authorization) {
+    token = req.headers.authorization.split(' ')[1] || req.headers.authorization;
   }
   
   if (!token) return res.status(401).json({ ok: false, msg: 'No autorizado' });
   
   try {
-    const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });
-    if (!decoded?.user || typeof decoded.user !== 'string') {
-      return res.status(401).json({ ok: false, msg: 'Token inválido' });
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      log.warn('AUTH_INVALID', { reason: error?.message });
+      return res.status(401).json({ ok: false, msg: 'Token inválido o expirado' });
     }
     
-    if (decoded.exp && Date.now() / 1000 > decoded.exp) {
-      return res.status(401).json({ ok: false, msg: 'Sesión expirada. Vuelve a iniciar sesión.' });
-    }
-    
-    req.user = decoded.user;
+    req.user = user.id; // UUID from Supabase
     next();
   } catch (err) {
-    log.warn('JWT_INVALID', { reason: err.name });
-    return res.status(401).json({ ok: false, msg: 'Token inválido o expirado' });
+    log.error('AUTH_MIDDLEWARE_ERROR', { error: err.message });
+    return res.status(401).json({ ok: false, msg: 'Error de autenticación' });
   }
 }
 
@@ -37,9 +33,11 @@ export async function requireMaster(req, res, next) {
   
   try {
     const db = getDB();
-    const u = await db.get("SELECT is_admin FROM users WHERE username = ?", [req.user]);
-    if (!u || u.is_admin !== 1) {
-      log.warn('ADMIN_ACCESS_DENIED', { user: req.user, ip: req.ip });
+    const profile = await db.profiles.get(req.user);
+    
+    // In Supabase architecture, we can use metadata or a role field in the profile
+    if (!profile || profile.plan !== 'admin') {
+      log.warn('ADMIN_ACCESS_DENIED', { user: req.user });
       return res.status(403).json({ ok: false, msg: "Permisos insuficientes." });
     }
     next();

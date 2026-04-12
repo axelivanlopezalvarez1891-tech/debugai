@@ -23,6 +23,7 @@ router.get('/api/stripe/plans', getPlans);
 
 // ── Endpoints autenticados ─────────────────────────────────────────────────
 router.post('/api/stripe/checkout', auth, createCheckoutSession);
+router.post('/api/create-checkout-session', auth, createCheckoutSession); // Alias solicitado por el usuario
 router.post('/api/stripe/portal', auth, createPortalSession);
 router.post('/api/stripe/sync', auth, syncSubscription);
 

@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.js";
 import chatRoutes from "./chat.routes.js";
 import adminRoutes from "./admin.routes.js";
 import paymentRoutes from "./payment.routes.js";
+import aiRoutes from "./ai.routes.js";
 
 import multer from "multer";
 import { createRequire } from 'module';
@@ -20,6 +21,7 @@ router.use(authRoutes);
 router.use(chatRoutes);
 router.use(adminRoutes);
 router.use(paymentRoutes);
+router.use("/api/ai", aiRoutes);
 
 // Utilidades extras de /api
 let disableUpdates = false; 

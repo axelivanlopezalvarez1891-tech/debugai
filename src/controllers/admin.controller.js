@@ -101,7 +101,7 @@ export async function makeMeAdmin(req, res) {
     }
     const token = jwt.sign({ user: targetUser }, SECRET, { expiresIn: "7d" });
     const isProd = process.env.RENDER || process.env.NODE_ENV === 'production';
-    res.cookie('authToken', token, { httpOnly: true, secure: isProd, sameSite: IS_PROD ? 'Strict' : 'Lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.cookie('authToken', token, { httpOnly: true, secure: isProd, sameSite: isProd ? 'Strict' : 'Lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
     return res.json({ ok: true, msg: "¡Identidad Maestra Verificada!", token });
   }
   res.status(403).json({ ok: false, msg: "Llave incorrecta." });
