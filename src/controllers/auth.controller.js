@@ -123,3 +123,55 @@ export async function updatePerfil(req, res) {
     res.json({ ok: false });
   }
 }
+
+export async function checkGift(req, res) {
+  const db = getDB();
+  try {
+    const profile = await db.profiles.get(req.user);
+    if (profile && profile.pending_gift) {
+      return res.json({ ok: true, gift: profile.pending_gift });
+    }
+    res.json({ ok: false });
+  } catch (err) {
+    res.json({ ok: false });
+  }
+}
+
+export async function claimGift(req, res) {
+  const db = getDB();
+  try {
+    const profile = await db.profiles.get(req.user);
+    if (!profile || !profile.pending_gift) return res.json({ ok: false });
+
+    const gift = profile.pending_gift;
+    const updates = { pending_gift: null };
+
+    if (gift.type === 'pro') {
+      updates.plan = 'pro';
+    } else if (gift.type === 'tokens') {
+      updates.creditos = (profile.creditos || 0) + (gift.amount || 1000);
+    }
+
+    await db.profiles.update(req.user, updates);
+    
+    // Log event
+    await db.events.track(req.user, 'GIFT_CLAIMED', { gift_type: gift.type });
+    
+    res.json({ ok: true, msg: "¡Regalo reclamado con éxito!" });
+  } catch (err) {
+    res.json({ ok: false });
+  }
+}
+
+export async function deleteAccount(req, res) {
+  try {
+    // Delete from profiles table
+    await supabase.from('profiles').delete().eq('id', req.user);
+    
+    // Delete from Auth (requires service role / admin api)
+    res.clearCookie('sb-access-token');
+    res.json({ ok: true, msg: "Cuenta eliminada (perfil borrado)." });
+  } catch (err) {
+    res.json({ ok: false });
+  }
+}
