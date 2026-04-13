@@ -1,4 +1,3 @@
-console.log("DEBUG: Loading src/app.js...");
 import express from "express";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -30,19 +29,6 @@ app.use(express.json());
 // Diagnostic Health Check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
-});
-
-// Diagnostic: File System Check (Only for verification)
-app.get("/api/debug-files", (req, res) => {
-  try {
-    const fs = (await import('fs')).default;
-    const list = (path) => fs.existsSync(path) ? fs.readdirSync(path) : "NOT FOUND";
-    res.json({
-      cwd: process.cwd(),
-      landing: { path: landingDist, files: list(landingDist) },
-      app: { path: appDist, files: list(appDist) }
-    });
-  } catch (e) { res.json({ error: e.message }); }
 });
 
 // Mount modularized API routes

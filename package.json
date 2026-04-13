@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "build": "cd landing_v2 && npm install && npm run build && cd ../app_v2 && npm install && npm run build",
-    "build:all": "npm run build",
+    "build": "npm run build:landing && npm run build:app",
+    "build:landing": "cd landing_v2 && npm run build",
+    "build:app": "cd app_v2 && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
@@ -26,6 +27,13 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.20.0",
     "stripe": "^22.0.1",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "framer-motion": "^10.12.16",
+    "lucide-react": "^0.244.0",
+    "react-router-dom": "^6.11.2",
+    "clsx": "^1.2.1",
+    "tailwind-merge": "^1.13.0"
   }
 }
