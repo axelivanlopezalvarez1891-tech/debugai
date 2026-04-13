@@ -32,18 +32,37 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
+// Diagnostic: File System Check (Only for verification)
+app.get("/api/debug-files", (req, res) => {
+  try {
+    const fs = (await import('fs')).default;
+    const list = (path) => fs.existsSync(path) ? fs.readdirSync(path) : "NOT FOUND";
+    res.json({
+      cwd: process.cwd(),
+      landing: { path: landingDist, files: list(landingDist) },
+      app: { path: appDist, files: list(appDist) }
+    });
+  } catch (e) { res.json({ error: e.message }); }
+});
+
 // Mount modularized API routes
 app.use(routes);
 
 // --- FULL PRODUCTION FALLBACKS (Express 5 Protected - NO REGEX) ---
 
+// Serve static assets correctly for Landing
+app.use("/assets", express.static(path.join(landingDist, "assets")));
+
 // Dashboard SPA Fallback (Matches anything starting with /app)
 app.use("/app", (req, res) => {
+  const filePath = path.join(appDist, req.path === "/" ? "index.html" : req.path);
   res.sendFile(path.join(appDist, "index.html"));
 });
 
 // Landing SPA Fallback (Matches everything else)
 app.use((req, res) => {
+  // If requesting an asset that wasn't found, don't return index.html (fixes MIME error)
+  if (req.path.includes("/assets/")) return res.status(404).send("Asset not found");
   res.sendFile(path.join(landingDist, "index.html"));
 });
 
