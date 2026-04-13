@@ -61,12 +61,15 @@ export const configureHelmet = () => helmet({
 
 // [SEC-2] CORS RESTRICTIVO
 export const configureCors = () => {
-  const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'https://debugai-sgew.onrender.com';
+  const EXTRA_ORIGIN = process.env.CORS_ORIGIN || '';
   return cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       const isLocal = origin.includes('localhost:') || origin.includes('127.0.0.1:');
-      if (origin === ALLOWED_ORIGIN || isLocal) {
+      const isVercel = origin.endsWith('.vercel.app');
+      const isRender = origin.includes('onrender.com');
+      const isCustom = EXTRA_ORIGIN && origin === EXTRA_ORIGIN;
+      if (isLocal || isVercel || isRender || isCustom) {
         return callback(null, true);
       }
       log.warn('CORS_BLOCKED', { origin });

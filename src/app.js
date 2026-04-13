@@ -1,19 +1,8 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import path from "path";
-import { fileURLToPath } from 'url';
-import helmet from "helmet";
-import cors from "cors";
 import { log } from "./utils/logger.js";
 import { configureHelmet, configureCors, rateLimiters } from "./config/security.js";
 import routes from "./routes/index.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Absolute paths for local fallback (Vercel uses its own routing)
-const appDist = path.resolve(__dirname, "../app_v2/dist");
-const landingDist = path.resolve(__dirname, "../landing_v2/dist");
 
 const app = express();
 
@@ -34,22 +23,9 @@ app.get("/api/health", (req, res) => {
 // Mount modularized API routes
 app.use(routes);
 
-// --- FULL PRODUCTION FALLBACKS (Express 5 Protected - NO REGEX) ---
-
-// Serve static assets correctly for Landing
-app.use("/assets", express.static(path.join(landingDist, "assets")));
-
-// Dashboard SPA Fallback (Matches anything starting with /app)
-app.use("/app", (req, res) => {
-  const filePath = path.join(appDist, req.path === "/" ? "index.html" : req.path);
-  res.sendFile(path.join(appDist, "index.html"));
-});
-
-// Landing SPA Fallback (Matches everything else)
-app.use((req, res) => {
-  // If requesting an asset that wasn't found, don't return index.html (fixes MIME error)
-  if (req.path.includes("/assets/")) return res.status(404).send("Asset not found");
-  res.sendFile(path.join(landingDist, "index.html"));
+// Fallback for unknown /api/* routes — prevents Vercel from crashing trying to find static files
+app.use("/api", (req, res) => {
+  res.status(404).json({ ok: false, msg: "Ruta API no encontrada." });
 });
 
 // Global Error Handler
