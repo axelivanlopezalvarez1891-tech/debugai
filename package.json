@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node src/server.js",
     "build": "echo 'Build successful'",
+    "build:all": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
