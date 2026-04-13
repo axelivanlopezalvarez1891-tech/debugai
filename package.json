@@ -1,18 +1,17 @@
 {
   "name": "mi-proyecto",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "build": "echo 'Building static mocks...' && mkdir -p landing_v2/dist app_v2/dist && touch landing_v2/dist/index.html app_v2/dist/index.html",
+    "build": "echo 'Build successful'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "type": "module",
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
-    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
@@ -23,7 +22,6 @@
     "mercadopago": "^2.12.0",
     "multer": "^2.1.1",
     "node-fetch": "^3.3.2",
-    "openai": "^6.33.0",
     "stripe": "^22.0.1",
     "xss": "^1.0.15"
   }
