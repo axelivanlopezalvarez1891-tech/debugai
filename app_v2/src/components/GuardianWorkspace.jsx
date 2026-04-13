@@ -12,7 +12,8 @@ import {
   Layout,
   MessageSquareCode,
   Sparkles,
-  Loader2
+  Loader2,
+  Shield
 } from 'lucide-react';
 
 const TabButton = ({ active, label, icon: Icon, onClick }) => (
