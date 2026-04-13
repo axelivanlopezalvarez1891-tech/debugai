@@ -1,35 +1,16 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "functions": {
     "api/index.js": {
       "maxDuration": 30
     }
   },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/app/assets/(.*)",
-      "dest": "/app_v2/dist/assets/$1"
-    },
-    {
-      "src": "/app/(.*)",
-      "dest": "/app_v2/dist/index.html"
-    },
-    {
-      "src": "/app",
-      "dest": "/app_v2/dist/index.html"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/landing_v2/dist/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/landing_v2/dist/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.js" },
+    { "source": "/app", "destination": "/app/index.html" },
+    { "source": "/app/:path*", "destination": "/app/index.html" },
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
