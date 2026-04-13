@@ -31,11 +31,6 @@ const appDist = path.join(__dirname, "..", "app_v2", "dist");
 app.use("/app", express.static(appDist));
 app.use("/", express.static(landingDist));
 
-// SPA Routing for Dashboard
-app.get("/app/:match(.*)", (req, res) => {
-  res.sendFile(path.join(appDist, "index.html"));
-});
-
 // Diagnostic Health Check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
@@ -44,8 +39,14 @@ app.get("/api/health", (req, res) => {
 // Mount modularized API routes
 app.use(routes);
 
-// Fallback to landing for everything else
-app.get("/:match(.*)", (req, res) => {
+// --- FALLBACK STRATEGY (Bulletproof for Express 5) ---
+// Serve Dashboard (app_v2)
+app.use("/app", (req, res) => {
+  res.sendFile(path.join(appDist, "index.html"));
+});
+
+// Serve Landing (everything else)
+app.use((req, res) => {
   res.sendFile(path.join(landingDist, "index.html"));
 });
 
