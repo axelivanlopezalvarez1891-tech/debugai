@@ -35,15 +35,15 @@ app.get("/api/health", (req, res) => {
 // Mount modularized API routes
 app.use(routes);
 
-// --- FULL PRODUCTION FALLBACKS (Express 5 Protected) ---
+// --- FULL PRODUCTION FALLBACKS (Express 5 Protected - NO REGEX) ---
 
-// Dashboard SPA Fallback
-app.get("/app/:match*", (req, res) => {
+// Dashboard SPA Fallback (Matches anything starting with /app)
+app.use("/app", (req, res) => {
   res.sendFile(path.join(appDist, "index.html"));
 });
 
-// Landing SPA Fallback (The Catch-All)
-app.get("/:match*", (req, res) => {
+// Landing SPA Fallback (Matches everything else)
+app.use((req, res) => {
   res.sendFile(path.join(landingDist, "index.html"));
 });
 
