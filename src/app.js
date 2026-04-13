@@ -32,7 +32,7 @@ app.use("/app", express.static(appDist));
 app.use("/", express.static(landingDist));
 
 // SPA Routing for Dashboard
-app.get("/app/(.*)", (req, res) => {
+app.get("/app/:match(.*)", (req, res) => {
   res.sendFile(path.join(appDist, "index.html"));
 });
 
@@ -45,7 +45,7 @@ app.get("/api/health", (req, res) => {
 app.use(routes);
 
 // Fallback to landing for everything else
-app.get("(.*)", (req, res) => {
+app.get("/:match(.*)", (req, res) => {
   res.sendFile(path.join(landingDist, "index.html"));
 });
 
