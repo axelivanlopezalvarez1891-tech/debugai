@@ -12,9 +12,6 @@
     "build:root": "echo 'Root build skip'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "engines": {
-    "node": "22.x"
-  },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
     "cheerio": "^1.2.0",
