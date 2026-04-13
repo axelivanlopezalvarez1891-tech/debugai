@@ -1,6 +1,6 @@
 import "./polyfills.js";
 import app from "../src/app.js";
 
-console.log("🚀 Server reconnection initiated...");
+console.log("🚀 DebugAI PRO is now LIVE and Connected!");
 
 export default app;
