@@ -2,7 +2,10 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/app/(.*)", "destination": "/api/index.js" },
+    { "source": "/app/assets/(.*)", "destination": "/app_v2/dist/assets/$1" },
+    { "source": "/app/(.*)", "destination": "/app_v2/dist/index.html" },
+    { "source": "/assets/(.*)", "destination": "/landing_v2/dist/assets/$1" },
+    { "source": "/favicon.ico", "destination": "/landing_v2/dist/favicon.ico" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ]
 }
