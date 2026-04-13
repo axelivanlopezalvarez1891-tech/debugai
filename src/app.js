@@ -35,6 +35,18 @@ app.get("/api/health", (req, res) => {
 // Mount modularized API routes
 app.use(routes);
 
+// --- FULL PRODUCTION FALLBACKS (Express 5 Protected) ---
+
+// Dashboard SPA Fallback
+app.get("/app/:match*", (req, res) => {
+  res.sendFile(path.join(appDist, "index.html"));
+});
+
+// Landing SPA Fallback (The Catch-All)
+app.get("/:match*", (req, res) => {
+  res.sendFile(path.join(landingDist, "index.html"));
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   log.error('UNHANDLED_ERROR', { msg: err.message, path: req.path });
