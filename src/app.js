@@ -28,7 +28,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // API routes
-app.use(routes);
+app.use("/api", routes);
 
 // Unknown /api/* routes
 app.use("/api", (req, res) => {

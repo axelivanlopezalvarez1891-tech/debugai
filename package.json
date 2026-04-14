@@ -2,13 +2,9 @@
   "name": "mi-proyecto",
   "version": "1.0.1",
   "type": "module",
-  "workspaces": [
-    "landing_v2",
-    "app_v2"
-  ],
   "scripts": {
     "start": "node src/server.js",
-    "build": "npm run build --workspaces && npm run build:root",
+    "build": "cd landing_v2 && npm install && npm run build && cd ../app_v2 && npm install && npm run build",
     "build:root": "echo 'Root build skip'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,1 +1,1 @@
-fix: ultimate production restoration using accept-header aware routing to separate spa navigation from static assets. resolved white screen outage.
+fix: definitive project synchronization and stable routing restoration to resolve white screen outage. Removed workspaces to prevent build conflicts.
