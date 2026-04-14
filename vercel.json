@@ -9,8 +9,9 @@
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "handle": "filesystem" },
+    { "src": "/app/assets/(.*)", "dest": "/app/assets/$1" },
     { "src": "/app/(.*)", "dest": "/app/index.html" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
