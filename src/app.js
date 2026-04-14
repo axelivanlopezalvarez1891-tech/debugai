@@ -44,8 +44,7 @@ app.get("/api/echo", (req, res) => {
   res.json({ path: req.path, url: req.url, originalUrl: req.originalUrl });
 });
 
-// API routes
-app.use("/api", routes);
+app.use(routes);
 
 // Unknown /api/* routes
 app.use("/api", (req, res) => {
