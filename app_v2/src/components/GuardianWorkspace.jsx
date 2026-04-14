@@ -37,6 +37,12 @@ const ResultCard = ({ result, delay }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const impactColors = {
+    high: 'bg-red-500/20 text-red-500 border-red-500/30',
+    medium: 'bg-orange-500/20 text-orange-500 border-orange-500/30',
+    low: 'bg-blue-500/20 text-blue-500 border-blue-500/30'
+  };
+
   return (
     <motion.div 
       initial={{ x: 20, opacity: 0 }}
@@ -51,7 +57,7 @@ const ResultCard = ({ result, delay }) => {
       `}></div>
 
       <div className="flex items-start gap-4">
-        <div className={`p-2 rounded-xl
+        <div className={`p-2 rounded-xl shrink-0
           ${result.type === 'error' ? 'bg-red-500/10 text-red-500' : 
             result.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 
             'bg-neon-cyan/10 text-neon-cyan'}
@@ -61,20 +67,30 @@ const ResultCard = ({ result, delay }) => {
            <Zap className="w-5 h-5" />}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-white font-bold text-sm mb-1 truncate">{result.title}</h4>
-          <p className="text-gray-500 text-[11px] leading-relaxed mb-4">{result.explanation || result.body}</p>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <h4 className="text-white font-bold text-sm truncate">{result.title}</h4>
+            {result.impact && (
+              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${impactColors[result.impact.toLowerCase()] || ''}`}>
+                {result.impact} Impact
+              </span>
+            )}
+          </div>
+          
+          <p className="text-gray-400 text-[11px] leading-relaxed mb-4 whitespace-pre-wrap">
+            {result.explanation}
+          </p>
           
           {result.fix && (
             <div className="relative group/code">
-              <div className="bg-black/40 rounded-lg p-3 border border-white/5 font-mono text-[10px] text-neon-cyan/70 select-all group-hover:border-white/10 transition-colors overflow-x-auto">
-                <span className="text-gray-600 mr-2 opacity-50 block mb-1">// Suggested Fix</span>
+              <div className="bg-black/60 rounded-xl p-4 border border-white/5 font-mono text-[10px] text-neon-cyan/70 select-all group-hover:border-[#fbbf24]/20 transition-all overflow-x-auto shadow-inner">
+                <span className="text-gray-600 mr-2 opacity-50 block mb-2 font-bold tracking-widest uppercase text-[8px]">// Proposed Implementation</span>
                 <code className="whitespace-pre">{result.fix}</code>
               </div>
               <button 
                 onClick={handleCopy}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition-all shadow-lg"
+                className="absolute top-3 right-3 p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:bg-[#fbbf24] hover:text-black transition-all shadow-xl backdrop-blur-md"
               >
-                {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <Code2 className="w-3.5 h-3.5" />}
+                {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Code2 className="w-3.5 h-3.5" />}
               </button>
             </div>
           )}

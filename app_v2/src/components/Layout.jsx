@@ -2,7 +2,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
-const Layout = ({ children, rightPanel, activeView, onViewChange }) => {
+const Layout = ({ children, rightPanel, activeView, onViewChange, user }) => {
   return (
     <div className="flex h-screen bg-[#030303] overflow-hidden">
       {/* Background Decor */}
@@ -12,7 +12,7 @@ const Layout = ({ children, rightPanel, activeView, onViewChange }) => {
 
       {/* Sidebar */}
       <div className="relative z-10 flex-shrink-0">
-        <Sidebar activeView={activeView} onViewChange={onViewChange} />
+        <Sidebar activeView={activeView} onViewChange={onViewChange} user={user} />
       </div>
 
 

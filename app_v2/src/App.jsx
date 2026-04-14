@@ -9,9 +9,11 @@ import UserActionSuite from './components/UserActionSuite';
 import MasterLockScreen from './components/MasterLockScreen';
 import LoadingSequence from './components/LoadingSequence';
 import GuardianWorkspace from './components/GuardianWorkspace';
+import StoreView from './components/StoreView';
 import { useDebugSimulation } from './hooks/useDebugSimulation';
 import { useManagement } from './hooks/useManagement';
 
+import AuthView from './components/AuthView';
 import { 
   PerformanceView, 
   EdgeView, 
@@ -21,7 +23,9 @@ import {
 
 function App() {
   const [isBooting, setIsBooting] = useState(true);
-  const [activeView, setActiveView] = useState('guardian'); // guardian, management, logs, performance, edge, settings
+  const [activeView, setActiveView] = useState('guardian'); // guardian, management, logs, performance, edge, settings, store
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   
   const { stabilityScore, riskLevel, logs, isPlaying } = useDebugSimulation();
@@ -37,12 +41,35 @@ function App() {
     deleteUser 
   } = useManagement();
 
+  // Check for session on load
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const resp = await fetch('/api/auth/get-perfil');
+        const data = await resp.json();
+        if (data.ok) {
+          setUser(data.user);
+        }
+      } catch (err) {
+        console.error("Auth check failed");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+    checkUser();
+  }, []);
+
   const handleUnlock = () => setIsAuthorized(true);
 
   const renderContent = () => {
+    // If we are in management view and not authorized, show the lock
+    if (activeView === 'management' && !isAuthorized) {
+      return <MasterLockScreen onUnlock={handleUnlock} />;
+    }
+
     switch (activeView) {
       case 'guardian':
-        return <GuardianWorkspace />;
+        return <GuardianWorkspace user={user} />;
       case 'management':
         return (
           <UserManagementView 
@@ -61,7 +88,9 @@ function App() {
       case 'edge':
         return <EdgeView />;
       case 'settings':
-        return <SettingsView />;
+        return <SettingsView user={user} onUpdate={setUser} />;
+      case 'store':
+        return <StoreView user={user} />;
       default:
         return null;
     }
@@ -80,12 +109,14 @@ function App() {
             transition={{ duration: 1.2, ease: "easeOut" }}
             className="relative"
           >
-            {/* Global Lock - Appears when transitioning from management or session invalid */}
-            {!isAuthorized && <MasterLockScreen onUnlock={handleUnlock} />}
-            
+            <AnimatePresence>
+              {!user && !loadingUser && <AuthView onLogin={setUser} />}
+            </AnimatePresence>
+
             <Layout 
               activeView={activeView} 
               onViewChange={setActiveView}
+              user={user}
               rightPanel={
                 activeView === 'management'
                   ? <UserActionSuite user={selectedUser} actions={{ giftPlus, giftTokens, deleteUser }} />

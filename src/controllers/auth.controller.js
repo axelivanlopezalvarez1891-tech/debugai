@@ -94,13 +94,17 @@ export async function getPerfil(req, res) {
 
     res.json({ 
       ok: true, 
-      username: profile.username,
-      plan: profile.plan || 'free',
-      premium: profile.plan === 'pro',
-      analyses_count: profile.analyses_count || 0,
-      analyses_limit: profile.analyses_limit || 5,
-      subscribed_at: profile.subscribed_at,
-      subscription_status: profile.subscription_status
+      user: {
+        id: req.user,
+        username: profile.username,
+        plan: profile.plan || 'free',
+        creditos: profile.creditos || 0,
+        premium: profile.plan === 'pro',
+        analyses_count: profile.analyses_count || 0,
+        analyses_limit: profile.analyses_limit || 5,
+        subscribed_at: profile.subscribed_at,
+        subscription_status: profile.subscription_status
+      }
     });
   } catch (err) {
     res.status(500).json({ ok: false });

@@ -4,7 +4,7 @@ export const useManagement = () => {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState(true); // Assume true, let 403 flip it
+  const [isAuthorized, setIsAuthorized] = useState(true); // Don't block UI by default
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchUsers = useCallback(async () => {
