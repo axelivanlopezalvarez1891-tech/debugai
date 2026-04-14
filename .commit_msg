@@ -1,1 +1,1 @@
-fix: total reset of routing to restore basic service and eliminate MIME errors. Removed all SPA shadowing logic.
+fix: force all traffic through Express backend to guarantee SPA fallback and accurate asset serving
