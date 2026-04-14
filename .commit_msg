@@ -1,1 +1,1 @@
-fix: ultimate definitive production restoration. synchronized assets, forced fresh build, and applied strict route ordering. resolved white screen outage.
+fix: total reset of routing to restore basic service and eliminate MIME errors. Removed all SPA shadowing logic.
