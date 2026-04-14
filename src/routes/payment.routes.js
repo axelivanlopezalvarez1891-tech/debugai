@@ -5,10 +5,10 @@ import express from "express";
 
 const router = Router();
 
-router.post("/api/create-preference", auth, createMpPreference);
+// Aliases para compatibilidad con el frontend
+router.post(["/api/payment/paypal/create", "/api/create-paypal-order"], auth, createPaypalOrder);
+router.post(["/api/payment/paypal/capture", "/api/capture-paypal-order"], auth, capturePaypalOrder);
+router.post(["/api/payment/mercadopago/create", "/api/create-preference"], auth, createMpPreference);
 router.post("/api/webhook/mercadopago", mpWebhook);
-
-router.post("/api/create-paypal-order", auth, createPaypalOrder);
-router.post("/api/capture-paypal-order", auth, capturePaypalOrder);
 
 export default router;
