@@ -16,6 +16,25 @@ import AuthView from './components/AuthView';
 import ChatHub from './components/ChatHub';
 import { SettingsView } from './components/SupportingViews';
 import { useManagement } from './hooks/useManagement';
+function App() {
+  const [isBooting, setIsBooting] = useState(true);
+  const [activeView, setActiveView] = useState('chat'); // chat, management, settings, store
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  
+  const { 
+    users, 
+    stats, 
+    isAuthorized, 
+    searchQuery, 
+    setSearchQuery, 
+    setIsAuthorized,
+    giftPlus,
+    giftTokens,
+    deleteUser 
+  } = useManagement();
 
   // Check for session on load
   useEffect(() => {
