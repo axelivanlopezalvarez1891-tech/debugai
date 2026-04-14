@@ -7,11 +7,17 @@
       "includeFiles": "../public/**"
     }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "src": "/app/assets/(.*)", "dest": "/app/assets/$1" },
-    { "src": "/app/(.*)", "dest": "/app/index.html" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.js" },
+    { 
+      "source": "/app/:path*", 
+      "has": [{ "type": "header", "key": "accept", "value": ".*text/html.*" }],
+      "destination": "/app/index.html" 
+    },
+    { 
+      "source": "/:path*", 
+      "has": [{ "type": "header", "key": "accept", "value": ".*text/html.*" }],
+      "destination": "/index.html" 
+    }
   ]
 }
