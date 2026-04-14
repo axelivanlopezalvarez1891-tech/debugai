@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { log } from "./utils/logger.js";
 import { configureHelmet, configureCors, rateLimiters } from "./config/security.js";
 import routes from "./routes/index.js";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,9 +23,13 @@ app.use(rateLimiters.global);
 app.use(cookieParser());
 app.use(express.json());
 
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 // Debug route
 app.get("/api/debug-files", (req, res) => {
-  const fs = require('fs');
   try {
     const assetsPath = path.join(publicDir, 'app/assets');
     const files = fs.readdirSync(assetsPath);
@@ -32,6 +37,11 @@ app.get("/api/debug-files", (req, res) => {
   } catch(e) {
     res.json({ status: "error", msg: e.message, path: publicDir });
   }
+});
+
+// Debug path
+app.get("/api/echo", (req, res) => {
+  res.json({ path: req.path, url: req.url, originalUrl: req.originalUrl });
 });
 
 // API routes
