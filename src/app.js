@@ -57,6 +57,12 @@ app.use(express.static(publicDir));
 
 // SPA catch-all: unknown paths serve the correct HTML
 app.use((req, res, next) => {
+  // If the request looks like an asset (has a file extension), return 404 instead of HTML
+  // to avoid strict MIME type errors in the browser.
+  if (req.path.match(/\.[^\/]+$/)) {
+    return res.status(404).send('Not found');
+  }
+
   const isAppRoute = req.path === "/app" || req.path.startsWith("/app/");
   const targetFile = isAppRoute
     ? path.join(publicDir, "app/index.html")
