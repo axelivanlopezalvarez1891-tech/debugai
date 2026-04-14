@@ -23,6 +23,24 @@ app.use(rateLimiters.global);
 app.use(cookieParser());
 app.use(express.json());
 
+// Path dump for debugging 404s
+app.use((req, res, next) => {
+  if (req.path.includes('dump-paths')) {
+    return res.json({
+      path: req.path,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      routes: routerToDump(routes)
+    });
+  }
+  next();
+});
+
+function routerToDump(router) {
+  return router.stack ? router.stack.map(l => l.route ? l.route.path : 'middleware') : [];
+}
+
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });

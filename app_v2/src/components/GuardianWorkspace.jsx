@@ -100,7 +100,7 @@ const ResultCard = ({ result, delay }) => {
   );
 };
 
-const GuardianWorkspace = () => {
+const GuardianWorkspace = ({ user }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
