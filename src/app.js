@@ -22,9 +22,16 @@ app.use(rateLimiters.global);
 app.use(cookieParser());
 app.use(express.json());
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+// Debug route
+app.get("/api/debug-files", (req, res) => {
+  const fs = require('fs');
+  try {
+    const assetsPath = path.join(publicDir, 'app/assets');
+    const files = fs.readdirSync(assetsPath);
+    res.json({ status: "ok", path: assetsPath, files: files });
+  } catch(e) {
+    res.json({ status: "error", msg: e.message, path: publicDir });
+  }
 });
 
 // API routes
