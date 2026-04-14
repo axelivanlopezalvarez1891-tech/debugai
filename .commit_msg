@@ -1,1 +1,1 @@
-fix: definitive restoration of production service and removal of the identity wall. simplified routing and removed auth overlay.
+fix: definitive production restoration using handle filesystem routing and guest safety checks. resolved white screen and redirect loop outage.
