@@ -1,9 +1,16 @@
-import { monochromeLogo as MonochromeLogo } from './Branding';
+import { MonochromeLogo } from './Branding';
 import { 
   Users,
   Coins,
   BadgeCheck,
-  Package
+  Package,
+  LayoutDashboard,
+  Terminal,
+  ShieldCheck,
+  Settings,
+  BarChart3,
+  Globe,
+  ChevronRight
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, active = false, badge, color }) => (
@@ -56,19 +63,6 @@ const Sidebar = ({ activeView, onViewChange, user }) => {
           <SidebarItem icon={Package} label="Token Store" active={activeView === 'store'} badge={user?.plan === 'pro' ? 'PRO' : null} color="text-indigo-400" />
         </div>
 
-        <div onClick={() => onViewChange('logs')}>
-          <SidebarItem icon={Terminal} label="Live Logs" active={activeView === 'logs'} badge="8.4k" />
-        </div>
-        
-        <div className="mt-8 text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] px-3 mb-4">
-          Analytics
-        </div>
-        <div onClick={() => onViewChange('performance')}>
-          <SidebarItem icon={BarChart3} label="Performance" active={activeView === 'performance'} />
-        </div>
-        <div onClick={() => onViewChange('edge')}>
-          <SidebarItem icon={Globe} label="Edge Network" active={activeView === 'edge'} />
-        </div>
         <div onClick={() => onViewChange('settings')}>
           <SidebarItem icon={Settings} label="System Config" active={activeView === 'settings'} />
         </div>

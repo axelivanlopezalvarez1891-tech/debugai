@@ -157,16 +157,15 @@ const GuardianWorkspace = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-neon-cyan" />
-            Pre-Deploy Guardian
+            <Sparkles className="w-6 h-6 text-[#fbbf24]" />
+            Guardian AI Hub
           </h2>
-          <p className="text-gray-500 text-sm font-medium italic">Analyze, detect, and fix code issues instantly with AI</p>
+          <p className="text-gray-500 text-sm font-medium italic">Expert analysis, security audit, and instant solutions.</p>
         </div>
 
         <div className="flex items-center gap-2 bg-white/5 h-fit p-1 rounded-2xl border border-white/5">
-          <TabButton active={activeTab === 'overview'} label="Overview" icon={Layout} onClick={() => setActiveTab('overview')} />
-          <TabButton active={activeTab === 'logs'} label="Logs" icon={Terminal} onClick={() => setActiveTab('logs')} />
-          <TabButton active={activeTab === 'ai'} label="AI Insights" icon={MessageSquareCode} onClick={() => setActiveTab('ai')} />
+          <TabButton active={activeTab === 'overview'} label="Auditor" icon={Layout} onClick={() => setActiveTab('overview')} />
+          <TabButton active={activeTab === 'ai'} label="Deep Insights" icon={MessageSquareCode} onClick={() => setActiveTab('ai')} />
         </div>
       </div>
 
@@ -176,43 +175,58 @@ const GuardianWorkspace = () => {
           <div className="flex-1 glass-panel rounded-3xl border-white/5 relative overflow-hidden flex flex-col shadow-inner">
             <div className="bg-white/5 px-4 py-2 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-gray-500" />
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">secure_component_v2.jsx</span>
+                <Code2 className="w-4 h-4 text-[#fbbf24]" />
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">Source Code Auditor</span>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-neon-cyan/10 text-neon-cyan text-[10px] font-bold">REACT / ES2024</span>
+              <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 text-[10px] font-bold">LEGACY PLUS v4.2</span>
             </div>
             <textarea 
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Paste your sensitive code here for deep AI analysis..."
-              className="flex-1 bg-transparent p-6 font-mono text-sm text-gray-300 outline-none resize-none placeholder:text-gray-700 selection:bg-neon-cyan/20 custom-scrollbar"
+              placeholder="Paste your code or describe your problem here for a 100% accurate solution..."
+              className="flex-1 bg-transparent p-6 font-mono text-sm text-gray-300 outline-none resize-none placeholder:text-gray-700 selection:bg-[#fbbf24]/20 custom-scrollbar"
             />
           </div>
 
-          <button 
-            onClick={handleAnalysis}
-            disabled={isAnalyzing || !code.trim()}
-            className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all duration-500 relative overflow-hidden group shadow-2xl
-              ${isAnalyzing 
-                ? 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed' 
-                : 'bg-white text-black hover:bg-neon-cyan hover:scale-[1.01] neon-glow-cyan'
-              }
-              ${!code.trim() && !isAnalyzing ? 'opacity-50 grayscale' : ''}
-            `}
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Analyzing core modules...
-              </>
-            ) : (
-              <>
-                <Zap className="w-5 h-5 fill-current" />
-                Run Comprehensive Analysis
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-neon-cyan/30 opacity-0 group-hover:opacity-100 animate-pulse"></div>
-              </>
-            )}
-          </button>
+          {!user ? (
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-5 rounded-3xl font-black text-sm uppercase tracking-[0.4em] flex items-center justify-center gap-4 bg-[#fbbf24] text-black hover:bg-[#f59e0b] shadow-2xl transition-all"
+            >
+              Log in to Run Audit
+            </button>
+          ) : (
+            <button 
+              onClick={handleAnalysis}
+              disabled={isAnalyzing || !code.trim() || (user.creditos <= 0 && user.plan !== 'pro' && user.plan !== 'admin')}
+              className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all duration-500 relative overflow-hidden group shadow-2xl
+                ${isAnalyzing 
+                  ? 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed' 
+                  : (user.creditos <= 0 && user.plan !== 'pro' && user.plan !== 'admin')
+                    ? 'bg-red-500/20 text-red-500 border border-red-500/20 cursor-not-allowed'
+                    : 'bg-white text-black hover:bg-[#fbbf24] hover:scale-[1.01] neon-glow-yellow'
+                }
+              `}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Analyzing core modules...
+                </>
+              ) : (user.creditos <= 0 && user.plan !== 'pro' && user.plan !== 'admin') ? (
+                <>
+                  <Coins className="w-5 h-5" />
+                  Tokens Exhausted
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 fill-current" />
+                  Run Comprehensive Audit
+                  <div className="absolute inset-x-0 bottom-0 h-1 bg-[#fbbf24]/30 opacity-0 group-hover:opacity-100 animate-pulse"></div>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Results Side */}

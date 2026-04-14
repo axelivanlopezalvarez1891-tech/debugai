@@ -23,12 +23,11 @@ import {
 
 function App() {
   const [isBooting, setIsBooting] = useState(true);
-  const [activeView, setActiveView] = useState('guardian'); // guardian, management, logs, performance, edge, settings, store
+  const [activeView, setActiveView] = useState('guardian'); // guardian, management, settings, store
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   
-  const { stabilityScore, riskLevel, logs, isPlaying } = useDebugSimulation();
   const { 
     users, 
     stats, 
@@ -81,18 +80,12 @@ function App() {
             stats={stats}
           />
         );
-      case 'logs':
-        return <LogsScreen logs={logs} />;
-      case 'performance':
-        return <PerformanceView />;
-      case 'edge':
-        return <EdgeView />;
       case 'settings':
         return <SettingsView user={user} onUpdate={setUser} />;
       case 'store':
         return <StoreView user={user} />;
       default:
-        return null;
+        return <GuardianWorkspace user={user} />;
     }
   };
 
@@ -120,7 +113,7 @@ function App() {
               rightPanel={
                 activeView === 'management'
                   ? <UserActionSuite user={selectedUser} actions={{ giftPlus, giftTokens, deleteUser }} />
-                  : <DetailsPanel logs={logs} />
+                  : null
               }
             >
               <div className="animate-in fade-in duration-1000">
