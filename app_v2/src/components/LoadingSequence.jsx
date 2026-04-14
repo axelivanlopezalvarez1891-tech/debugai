@@ -7,7 +7,7 @@ const SYSTEM_LOGS = [
   "Injecting AI guardian modules...",
   "Calibrating analysis engine...",
   "Synchronizing security protocols...",
-  "Kernel integrity: VERIFIED",
+  "Guardian v2.0.4: ONLINE",
   "Ready for deployment."
 ];
 
