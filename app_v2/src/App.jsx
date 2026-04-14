@@ -102,10 +102,6 @@ function App() {
             transition={{ duration: 1.2, ease: "easeOut" }}
             className="relative"
           >
-            <AnimatePresence>
-              {!user && !loadingUser && <AuthView onLogin={setUser} />}
-            </AnimatePresence>
-
             <Layout 
               activeView={activeView} 
               onViewChange={setActiveView}
