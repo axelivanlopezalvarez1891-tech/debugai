@@ -11,7 +11,6 @@ import LoadingSequence from './components/LoadingSequence';
 import LandingStage from './components/LandingStage';
 import GuardianWorkspace from './components/GuardianWorkspace';
 import StoreView from './components/StoreView';
-import UserManagementView from './components/UserManagementView';
 import AuthView from './components/AuthView';
 import ChatHub from './components/ChatHub';
 import { SettingsView } from './components/SupportingViews';

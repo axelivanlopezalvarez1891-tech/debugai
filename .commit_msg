@@ -1,1 +1,1 @@
-fix(core): restored missing App function signature and state hooks to resolve build failure.
+refactor(core): cleanup duplicate imports in App.jsx.
